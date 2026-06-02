@@ -1,0 +1,15 @@
+// Local.xcconfig.example
+// SmartAccountDemo
+//
+// Copy this file to `Local.xcconfig` and fill in your Apple Developer Team ID.
+// `Local.xcconfig` is gitignored; each developer maintains their own copy.
+//
+// Find your Team ID at:
+//   - Xcode -> Settings -> Accounts -> (your Apple ID) -> click team row,
+//     the ID is shown next to the team name.
+//   - Or: Apple Developer Portal -> Membership Details -> Team ID.
+//
+// Example value: `DEVELOPMENT_TEAM = ABCD12EFGH`
+
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic

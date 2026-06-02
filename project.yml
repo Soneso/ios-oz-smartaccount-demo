@@ -1,0 +1,376 @@
+# project.yml — XcodeGen spec for SmartAccountDemo
+#
+# Pinned dependency versions (verified 2026-05-16):
+#   xcodegen:       2.45.4  (installed: 2.44.1; latest stable from
+#                            `gh api repos/yonaskolb/XcodeGen/releases/latest`)
+#   reown-swift:    2.2.9   (verified via
+#                            `gh api repos/reown-com/reown-swift/releases/latest`)
+#   SwiftLint:      0.63.2  (verified via
+#                            `gh api repos/realm/SwiftLint/releases/latest`)
+#   stellar-ios-mac-sdk: local path ../stellar-ios-mac-sdk on branch feature/oz-smart-account
+
+name: SmartAccountDemo
+options:
+  bundleIdPrefix: com.soneso.stellar.smartaccount.demo
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  # Swift 6 strict concurrency — enforced project-wide
+  swiftVersion: "6.0"
+  xcodeVersion: "16.0"
+
+# ============================================================================
+# Project-Level Build Configuration
+# ============================================================================
+# Configs/Shared.xcconfig is committed and applies to every checkout. It
+# conditionally includes Configs/Local.xcconfig (gitignored) which supplies
+# per-developer values such as DEVELOPMENT_TEAM. The chain keeps signing
+# selection out of shared history while still surviving `xcodegen generate`.
+configFiles:
+  Debug: Configs/Shared.xcconfig
+  Release: Configs/Shared.xcconfig
+
+# ============================================================================
+# SPM Packages
+# ============================================================================
+packages:
+  stellarsdk:
+    path: ../stellar-ios-mac-sdk
+  reown-swift:
+    url: https://github.com/reown-com/reown-swift
+    # 2.2.9 — latest stable verified 2026-05-16
+    exactVersion: 2.2.9
+
+# ============================================================================
+# Shared Settings
+# ============================================================================
+settings:
+  base:
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_VERSION: "6.0"
+    CLANG_ENABLE_MODULES: YES
+    ENABLE_TESTABILITY: YES
+    DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+
+# ============================================================================
+# Targets
+# ============================================================================
+targets:
+
+  # --------------------------------------------------------------------------
+  # iOS Target
+  # --------------------------------------------------------------------------
+  SmartAccountDemo:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    bundleIdSuffix: .ios
+
+    sources:
+      - path: Sources
+        type: group
+      - path: Sources-iOS
+        type: group
+      # Resources are declared as a sources entry with buildPhase: resources
+      # so xcodegen walks the directory and adds each file (Assets.xcassets,
+      # LaunchScreen.storyboard, soroban_token_contract.wasm) to the Copy
+      # Bundle Resources build phase individually. The shorthand
+      # `resources: - path: Resources` block xcodegen also accepts produces
+      # no pbxproj references for directory contents in 2.45.x, so this
+      # explicit form is required to actually ship the files in the bundle.
+      - path: Resources
+        type: group
+        buildPhase: resources
+
+    info:
+      path: Sources-iOS/Info.plist
+
+      properties:
+        CFBundleDisplayName: "Smart Account Demo"
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        # The AppBar on MainScreen hides the NavigationStack nav bar and extends
+        # its dark brand-primary background into the status-bar region. All other
+        # screens also use a dark-background nav bar (via UINavigationBarAppearance).
+        # Forcing light (white) status-bar items globally ensures legibility on all
+        # screens without per-screen overrides. Controller-based style is disabled
+        # because SwiftUI's UIHostingController derives the style from the root
+        # environment color scheme, which varies with the user's theme toggle and
+        # would produce dark (black) status-bar items in light mode on top of the
+        # dark AppBar — rendering them invisible.
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UIViewControllerBasedStatusBarAppearance: false
+        # Launch storyboard declaration. Without this, iOS treats the binary as
+        # a pre-iPhone-X legacy app and letterboxes it inside a 320x480-aligned
+        # canvas (black bars top and bottom). The storyboard itself paints a
+        # brand-primary background (BrandPrimary colour set under
+        # Resources/Assets.xcassets) so the splash transitions seamlessly into
+        # the AppBar on first frame.
+        UILaunchStoryboardName: LaunchScreen
+        # Custom URL scheme owned by this app. Wallets that pair with the dApp
+        # via Reown (WalletConnect v2) return the session-settle and signing
+        # response envelopes by opening this scheme with a `wc_ev` query param.
+        # The matching `.onOpenURL` handler in SmartAccountDemoApp forwards
+        # those URLs into `Sign.instance.dispatchEnvelope(_:)`. Must align with
+        # the `redirect: AppMetadata.Redirect(native: ...)` value in
+        # ReownWalletHandler.configureOnce.
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.soneso.stellar.smartaccount.demo.ios.wcredirect
+            CFBundleURLSchemes:
+              - stellar-smartaccount-ios
+
+    dependencies:
+      - package: stellarsdk
+        product: stellarsdk
+      # Reown is iOS-only (not linked on macOS — no WalletConnect support there).
+      # ReownWalletHandler imports only the slim WalletConnect Sign client
+      # family (WalletConnectSign + Pairing + Networking); ReownAppKit's
+      # wallet-selection UI is not used. Linking the slim products keeps the
+      # account-abstraction Yttrium xcframework out of the final app bundle
+      # (the static archive that ReownAppKit otherwise drags into Frameworks/),
+      # shrinking the shipped binary and the link step.
+      - package: reown-swift
+        product: WalletConnect
+      - package: reown-swift
+        product: WalletConnectPairing
+      - package: reown-swift
+        product: WalletConnectNetworking
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.ios
+        INFOPLIST_FILE: Sources-iOS/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Entitlements/SmartAccountDemo.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"  # iPhone + iPad
+
+    postBuildScripts:
+      # Build-time gate: fail Release builds that still have ?mode=developer
+      # in the Associated Domains entitlement. This prevents accidental App Store /
+      # TestFlight distribution before the AASA file is updated at soneso.com.
+      # Using postBuildScripts (not preBuildScripts) so Xcode does not skip it on
+      # cached incremental builds.
+      - name: "Entitlements Mode-Developer Release Gate"
+        script: |
+          if [ "${CONFIGURATION}" = "Release" ]; then
+            ENTITLEMENTS="${SRCROOT}/Entitlements/SmartAccountDemo.entitlements"
+            if grep -q "?mode=developer" "${ENTITLEMENTS}"; then
+              echo "error: Release build rejected: webcredentials ?mode=developer is still present in SmartAccountDemo.entitlements. Update soneso.com/.well-known/apple-app-site-association to include bundle ID '${PRODUCT_BUNDLE_IDENTIFIER}', then remove ?mode=developer from the entitlements before distributing." >&2
+              exit 1
+            fi
+          fi
+        basedOnDependencyAnalysis: false
+        outputFiles: []
+
+  # --------------------------------------------------------------------------
+  # macOS Target
+  # --------------------------------------------------------------------------
+  SmartAccountDemoMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+
+    sources:
+      - path: Sources
+        type: group
+      - path: Sources-macOS
+        type: group
+      # macOS targets cannot bundle an iOS storyboard — actool rejects it with
+      # "iOS storyboards do not support target device type mac". The launch
+      # storyboard is only meaningful for the iPhone/iPad app.
+      - path: Resources
+        type: group
+        buildPhase: resources
+        excludes:
+          - "LaunchScreen.storyboard"
+
+    info:
+      path: Sources-macOS/Info.plist
+      properties:
+        CFBundleDisplayName: "Smart Account Demo"
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSPrincipalClass: NSApplication
+
+    dependencies:
+      # Reown is deliberately absent on macOS — there is no WalletConnect session
+      # layer for this platform. See Sources-macOS/Wallet/NoOpWalletConnector.swift
+      # for the explicit no-op implementation.
+      - package: stellarsdk
+        product: stellarsdk
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.macos
+        INFOPLIST_FILE: Sources-macOS/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Entitlements/SmartAccountDemoMac.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+
+    postBuildScripts:
+      # Build-time gate: same policy as iOS, different entitlements path.
+      - name: "Entitlements Mode-Developer Release Gate"
+        script: |
+          if [ "${CONFIGURATION}" = "Release" ]; then
+            ENTITLEMENTS="${SRCROOT}/Entitlements/SmartAccountDemoMac.entitlements"
+            if grep -q "?mode=developer" "${ENTITLEMENTS}"; then
+              echo "error: Release build rejected: webcredentials ?mode=developer is still present in SmartAccountDemoMac.entitlements. Update soneso.com/.well-known/apple-app-site-association to include bundle ID '${PRODUCT_BUNDLE_IDENTIFIER}', then remove ?mode=developer from the entitlements before distributing." >&2
+              exit 1
+            fi
+          fi
+        basedOnDependencyAnalysis: false
+        outputFiles: []
+
+  # --------------------------------------------------------------------------
+  # iOS Tests
+  # --------------------------------------------------------------------------
+  SmartAccountDemoTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+
+    sources:
+      - path: Tests
+
+    dependencies:
+      - target: SmartAccountDemoLib
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.tests
+        BUNDLE_LOADER: ""
+        TEST_HOST: ""
+        GENERATE_INFOPLIST_FILE: YES
+
+  # --------------------------------------------------------------------------
+  # macOS Tests
+  # --------------------------------------------------------------------------
+  SmartAccountDemoMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "15.0"
+
+    sources:
+      - path: Tests
+
+    dependencies:
+      - target: SmartAccountDemoMacLib
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+  # --------------------------------------------------------------------------
+  # Shared library target for testing (iOS)
+  # --------------------------------------------------------------------------
+  SmartAccountDemoLib:
+    type: framework
+    platform: iOS
+    deploymentTarget: "18.0"
+
+    sources:
+      - path: Sources
+        type: group
+      # Bundle the Asset Catalog into the framework so colour-set lookups
+      # resolved through `Bundle(for: ThemeBundleAnchor.self)` succeed both
+      # from the host app (which loads the framework) and from the test
+      # bundle (which also links the framework). `LaunchScreen.storyboard`
+      # and the WASM artifact are excluded because they are only meaningful
+      # to the app target, not the framework.
+      - path: Resources
+        type: group
+        buildPhase: resources
+        excludes:
+          - "LaunchScreen.storyboard"
+          - "soroban_token_contract.wasm"
+
+    dependencies:
+      - package: stellarsdk
+        product: stellarsdk
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.lib
+        DEFINES_MODULE: YES
+        GENERATE_INFOPLIST_FILE: YES
+
+  # --------------------------------------------------------------------------
+  # Shared library target for testing (macOS)
+  # --------------------------------------------------------------------------
+  SmartAccountDemoMacLib:
+    type: framework
+    platform: macOS
+    deploymentTarget: "15.0"
+
+    sources:
+      - path: Sources
+        type: group
+      # Bundle the Asset Catalog into the framework so colour-set lookups
+      # resolved through `Bundle(for: ThemeBundleAnchor.self)` succeed both
+      # from the host app and from the test bundle. The iOS-only launch
+      # storyboard is excluded because `actool` rejects it on the macOS
+      # platform; the WASM artifact is excluded because it is only
+      # meaningful to the app target.
+      - path: Resources
+        type: group
+        buildPhase: resources
+        excludes:
+          - "LaunchScreen.storyboard"
+          - "soroban_token_contract.wasm"
+
+    dependencies:
+      - package: stellarsdk
+        product: stellarsdk
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soneso.stellar.smartaccount.demo.mac.lib
+        DEFINES_MODULE: YES
+        GENERATE_INFOPLIST_FILE: YES
+
+# ============================================================================
+# Schemes
+# ============================================================================
+schemes:
+
+  SmartAccountDemo:
+    build:
+      targets:
+        SmartAccountDemo: all
+        SmartAccountDemoLib: all
+        SmartAccountDemoTests: [test]
+    test:
+      targets:
+        - SmartAccountDemoTests
+      gatherCoverageData: true
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  SmartAccountDemoMac:
+    build:
+      targets:
+        SmartAccountDemoMac: all
+        SmartAccountDemoMacLib: all
+        SmartAccountDemoMacTests: [test]
+    test:
+      targets:
+        - SmartAccountDemoMacTests
+      gatherCoverageData: true
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

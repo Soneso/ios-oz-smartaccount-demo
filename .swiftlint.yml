@@ -1,0 +1,158 @@
+# .swiftlint.yml — SmartAccountDemo
+# SwiftLint 0.63.2 (verified 2026-05-16 via gh api repos/realm/SwiftLint/releases/latest)
+#
+# Baseline: zero warnings, zero errors.
+# Pre-commit hook should run `swiftlint` before each commit.
+
+included:
+  - Sources
+  - Sources-iOS
+  - Sources-macOS
+  - Tests
+
+excluded:
+  - .build
+  - .swiftpm
+  - DerivedData
+
+# ============================================================================
+# Opt-in Rules
+# ============================================================================
+opt_in_rules:
+  - array_init
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_object_literal
+  - empty_collection_literal
+  - empty_string
+  - enum_case_associated_values_count
+  - explicit_init
+  - extension_access_modifier
+  - fallthrough
+  - fatal_error_message
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - multiline_arguments
+  - multiline_function_chains
+  - multiline_parameters
+  - operator_usage_whitespace
+  - prefer_self_in_static_references
+  - prefer_zero_over_explicit_init
+  - redundant_nil_coalescing
+  - sorted_imports
+  - static_operator
+  - toggle_bool
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  - vertical_parameter_alignment_on_call
+  - yoda_condition
+
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+# ============================================================================
+# Disabled Built-in Rules
+# ============================================================================
+disabled_rules:
+  # Trailing commas in multi-line expressions are optional and cause noise.
+  - trailing_comma
+  # file_header requires a project-wide pattern that varies by file name;
+  # the copyright comment format is already consistent without lint enforcement.
+  - file_header
+  # TODO annotations mark phase-gated incomplete routes. They are intentional
+  # and should not block the zero-warnings baseline.
+  - todo
+
+# ============================================================================
+# Rule Configuration
+# ============================================================================
+
+# Security: disallow force operations — use guard + throw or optional chaining.
+force_unwrapping:
+  severity: error
+force_cast: error
+force_try: error
+
+# Function bodies must remain readable; 40 lines is the hard limit.
+function_body_length:
+  warning: 35
+  error: 40
+
+# Cyclomatic complexity: keep branching logic simple and testable.
+cyclomatic_complexity:
+  warning: 8
+  error: 10
+
+# Line length: permit slightly longer lines in comments and URLs.
+line_length:
+  warning: 120
+  error: 160
+  ignores_urls: true
+  ignores_comments: true
+  ignores_function_declarations: false
+
+# File length: flag large files early. Comment-only lines excluded from count.
+file_length:
+  warning: 400
+  error: 600
+  ignore_comment_only_lines: true
+
+# Type body length.
+type_body_length:
+  warning: 300
+  error: 400
+
+# Nesting: discourage deeply nested types.
+nesting:
+  type_level:
+    warning: 2
+    error: 3
+  function_level:
+    warning: 4
+    error: 5
+
+# Identifier names.
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 60
+    error: 80
+  excluded:
+    - id
+    - ok
+    - i
+    - j
+    - x
+    - y
+
+# ============================================================================
+# Custom Rules
+# ============================================================================
+custom_rules:
+  no_print_statements:
+    name: "No print/debugPrint statements"
+    regex: '(^|[^a-zA-Z0-9_])(print|debugPrint)\s*\('
+    message: "Use ActivityLogState or structured logging — never print() or debugPrint() in shipped code."
+    severity: error
+
+  no_os_log:
+    name: "No os_log usage"
+    regex: '\bos_log\s*\('
+    message: "Use ActivityLogState — never os_log() in the demo app."
+    severity: error

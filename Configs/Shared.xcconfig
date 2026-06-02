@@ -1,0 +1,20 @@
+// Shared.xcconfig
+// SmartAccountDemo
+//
+// Copyright (c) 2026 Soneso. All rights reserved.
+
+// Build configuration applied at the project level via project.yml's
+// `configFiles` block. Inherited by every target (iOS app, macOS app, tests,
+// frameworks) unless a target-level setting overrides a specific key.
+//
+// Shared settings that should apply to every checkout go directly in this
+// file. Per-developer values (currently: DEVELOPMENT_TEAM) live in a
+// gitignored Local.xcconfig that is conditionally included below, so each
+// developer's signing team selection stays out of shared history.
+//
+// On a fresh checkout Local.xcconfig does not exist; the `#include?`
+// (note the trailing `?`) is optional and silently skipped, leaving
+// DEVELOPMENT_TEAM unset. Signing will fail until the developer copies
+// Local.xcconfig.example to Local.xcconfig and fills in their team ID.
+
+#include? "Local.xcconfig"

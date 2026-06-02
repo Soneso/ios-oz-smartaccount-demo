@@ -1,0 +1,56 @@
+# Xcode build output
+build/
+DerivedData/
+*.xcodeproj/
+
+# SwiftPM
+.build/
+.swiftpm/
+*.resolved
+
+# xcodegen regenerates the project; track project.yml, not the generated project
+*.xcodeproj
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode per-user settings (not part of the project definition)
+xcuserdata/
+*.xcuserdatad
+*.xcscmblueprint
+*.xccheckout
+
+# Per-developer signing config (DEVELOPMENT_TEAM, CODE_SIGN_STYLE).
+# Shared.xcconfig conditionally includes this; each developer copies
+# Local.xcconfig.example to Local.xcconfig with their own Team ID.
+Configs/Local.xcconfig
+
+# Simulator crash logs
+*.crash
+
+# Swift Package Manager caches
+.build/
+.swiftpm/
+
+# CocoaPods (not used, but belt-and-suspenders)
+Pods/
+Podfile.lock
+
+# Fastlane (not yet used)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Test results
+TestResults/
+
+# Coverage
+*.profdata
+*.profraw
