@@ -399,8 +399,6 @@ public final class MainScreenFlow {
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            rpId: DemoConfig.defaultRpId,
-            rpName: DemoConfig.rpName,
             relayerUrl: DemoConfig.defaultRelayerURL.isEmpty ? nil : DemoConfig.defaultRelayerURL,
             indexerUrl: DemoConfig.defaultIndexerURL.isEmpty ? nil : DemoConfig.defaultIndexerURL,
             webauthnProvider: webAuthnProvider,

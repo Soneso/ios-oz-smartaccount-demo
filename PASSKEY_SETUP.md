@@ -24,7 +24,7 @@ iOS uses the AuthenticationServices framework (`ASAuthorizationPlatformPublicKey
 
 ### Step 1: Set the RP ID
 
-The RP ID is supplied to the smart account configuration. The demo reads it from `DemoConfig.defaultRpId` (currently `soneso.com`):
+The RP ID is supplied to the WebAuthn provider (`AppleWebAuthnProvider`). The demo reads it from `DemoConfig.defaultRpId` (currently `soneso.com`):
 
 ```swift
 public enum DemoConfig {
