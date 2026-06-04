@@ -13,7 +13,7 @@ import stellarsdk
 /// Demo-layer view model for a pending credential in the wallet connection
 /// screen.
 ///
-/// Contains only the fields the UI needs from `StoredCredential`, keeping
+/// Contains only the fields the UI needs from `OZStoredCredential`, keeping
 /// `WalletConnectionScreenCore` and `PendingCredentialCard` free of a direct
 /// `import stellarsdk` dependency.
 public struct PendingCredentialInfo: Sendable, Equatable, Hashable {
@@ -42,18 +42,18 @@ public struct PendingCredentialInfo: Sendable, Equatable, Hashable {
 
 extension PendingCredentialInfo {
 
-    /// Converts a `StoredCredential` into the demo DTO, projecting only the
+    /// Converts an `OZStoredCredential` into the demo DTO, projecting only the
     /// fields the pending-deployment UI requires.
-    public init(_ credential: StoredCredential) {
+    public init(_ credential: OZStoredCredential) {
         self.credentialId = credential.credentialId
         self.contractId = credential.contractId
         self.nickname = credential.nickname
     }
 }
 
-extension Array where Element == StoredCredential {
+extension Array where Element == OZStoredCredential {
 
-    /// Maps an array of `StoredCredential` to `[PendingCredentialInfo]`.
+    /// Maps an array of `OZStoredCredential` to `[PendingCredentialInfo]`.
     public func asPendingInfo() -> [PendingCredentialInfo] {
         map { PendingCredentialInfo($0) }
     }

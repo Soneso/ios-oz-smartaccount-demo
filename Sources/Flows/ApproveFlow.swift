@@ -14,7 +14,7 @@ import stellarsdk
 ///
 /// Populated when `ApproveFlow.approveAllowance(...)` or
 /// `ApproveFlow.multiSignerApproveAllowance(...)` returns. The shape mirrors
-/// the SDK's `TransactionResult` so the screen can render success / failure
+/// the SDK's `OZTransactionResult` so the screen can render success / failure
 /// cards from a single value.
 public struct ApproveResult: Sendable, Equatable {
 
@@ -51,7 +51,7 @@ public protocol ContractCallOperationsType: Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult
+    ) async throws -> OZTransactionResult
 }
 
 // ============================================================================
@@ -72,7 +72,7 @@ public struct ContractCallOperationsAdapter: ContractCallOperationsType, Sendabl
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         return try await inner.contractCall(
             target: target,
             targetFn: targetFn,
@@ -95,8 +95,8 @@ public protocol MultiSignerContractCallType: Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 }
 
 // ============================================================================
@@ -117,8 +117,8 @@ public struct MultiSignerContractCallAdapter: MultiSignerContractCallType, Senda
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await inner.multiSignerContractCall(
             target: target,
             targetFn: targetFn,
@@ -162,7 +162,7 @@ public protocol AllowanceFetcherType: Sendable {
 /// Supports two approval variants:
 /// - Single-signer: `transactionOperations.contractCall(target:targetFn:"approve",targetArgs:)`.
 /// - Multi-signer: `multiSignerManager.multiSignerContractCall(...)` with an
-///   explicit `[SelectedSigner]` list, used when more than one signer is
+///   explicit `[OZSelectedSigner]` list, used when more than one signer is
 ///   available on the connected smart account.
 ///
 /// Multi-signer ordering & atomicity:
@@ -278,7 +278,7 @@ public final class ApproveFlow {
     /// - Throws: `ApproveFlowError.alreadyInProgress` when reentered;
     ///   `ApproveFlowError.invalidAmount` when the amount cannot be parsed
     ///   into a positive `Int64` stroop value;
-    ///   `WalletException.NotConnected` when no wallet is connected; any
+    ///   `SmartAccountWalletException.NotConnected` when no wallet is connected; any
     ///   SDK error including `WebAuthnException.Cancelled` for user
     ///   cancellations.
     public func approveAllowance(
@@ -289,7 +289,7 @@ public final class ApproveFlow {
     ) async throws -> ApproveResult {
         guard !isApproving else { throw ApproveFlowError.alreadyInProgress }
         guard demoState.isConnected, let smartAccountId = demoState.contractId else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isApproving = true
         defer { isApproving = false }
@@ -318,7 +318,7 @@ public final class ApproveFlow {
     ///
     /// Atomicity: registers each delegated signer's secret key in-process via
     /// `kit.externalSigners.addFromSecret` and each Ed25519 secret on the demo
-    /// adapter, builds the `[SelectedSigner]` list, then submits via the
+    /// adapter, builds the `[OZSelectedSigner]` list, then submits via the
     /// multi-signer manager — all inside a single cleanup wrapper. On any failure
     /// — including registration mismatches and non-success SDK results — both the
     /// delegated keypairs and the adapter secrets are cleared before the error
@@ -350,7 +350,7 @@ public final class ApproveFlow {
     ) async throws -> ApproveResult {
         guard !isApproving else { throw ApproveFlowError.alreadyInProgress }
         guard demoState.isConnected, let smartAccountId = demoState.contractId else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isApproving = true
         defer { isApproving = false }
@@ -394,7 +394,7 @@ public final class ApproveFlow {
         chosenSigners: [any OZSmartAccountSigner],
         delegatedSecrets: [String: String],
         ed25519Secrets: [Ed25519SecretKey: Data]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         do {
             return try await MultiSignerRegistration.registerAdapterSignersWithCleanup(
                 delegatedSecrets: delegatedSecrets,
@@ -533,7 +533,7 @@ public final class ApproveFlow {
     // MARK: - Private: result handling
     // -------------------------------------------------------------------------
 
-    private func handleSingleSignerResult(_ sdkResult: TransactionResult) -> ApproveResult {
+    private func handleSingleSignerResult(_ sdkResult: OZTransactionResult) -> ApproveResult {
         if sdkResult.success, let hash = sdkResult.hash {
             activityLog.success("Approve successful! Hash: \(truncateAddress(hash, chars: 8))")
             return ApproveResult(success: true, hash: hash, error: nil)
@@ -543,7 +543,7 @@ public final class ApproveFlow {
         return ApproveResult(success: false, hash: nil, error: msg)
     }
 
-    private func handleMultiSignerResult(_ sdkResult: TransactionResult) -> ApproveResult {
+    private func handleMultiSignerResult(_ sdkResult: OZTransactionResult) -> ApproveResult {
         if sdkResult.success, let hash = sdkResult.hash {
             activityLog.success(
                 "Multi-signer approve successful! Hash: \(truncateAddress(hash, chars: 8))"
@@ -562,7 +562,7 @@ public final class ApproveFlow {
 
 /// Errors thrown by `ApproveFlow` at the flow layer (not from the SDK).
 ///
-/// SDK errors (`WebAuthnException`, `ValidationException`, etc.) are
+/// SDK errors (`WebAuthnException`, `SmartAccountValidationException`, etc.) are
 /// propagated directly without wrapping. These cases guard flow-level
 /// constraints only.
 public enum ApproveFlowError: Error, Sendable {
@@ -619,8 +619,8 @@ struct NoOpContractCallOperations: ContractCallOperationsType {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult {
-        throw WalletException.NotConnected(message: "No wallet connected.")
+    ) async throws -> OZTransactionResult {
+        throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
     }
 }
 
@@ -630,8 +630,8 @@ struct NoOpMultiSignerContractCall: MultiSignerContractCallType {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
-        throw WalletException.NotConnected(message: "No wallet connected.")
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
     }
 }

@@ -85,7 +85,7 @@ struct SmartAccountDemoApp: App {
             // ceremonies will fail at point-of-use with an actionable error.
             activityLog.error("Bootstrap: AppleWebAuthnProvider init failed — \(ActivityLogState.redact(actionableMessage(for: error)))")
         }
-        let storage = KeychainStorageAdapter()
+        let storage = OZKeychainStorageAdapter()
         demoState.setStorage(storage)
 
         // External-wallet connect requires a Reown project ID. When none is

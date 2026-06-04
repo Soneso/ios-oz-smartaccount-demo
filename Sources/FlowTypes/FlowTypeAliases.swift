@@ -23,7 +23,7 @@ import stellarsdk
 ///
 /// Re-exported so read-only consumers (`ContextRuleCard`, `KnownSignersScreenCore`)
 /// can reference the type without a per-file `import stellarsdk`.
-public typealias ParsedContextRuleInfo = ParsedContextRule
+public typealias ParsedContextRuleInfo = OZParsedContextRule
 
 /// Static builder helpers for signer identity, key derivation, and equality.
 ///
@@ -62,14 +62,14 @@ public typealias StellarProtocol = StellarProtocolConstants
 /// A resolved signer entry passed to multi-signer submission pipelines.
 ///
 /// Re-exported so submission pipeline helpers in the component layer can
-/// reference `[SelectedSigner]` return types without a per-file SDK import.
-public typealias SelectedSignerEntry = SelectedSigner
+/// reference `[OZSelectedSigner]` return types without a per-file SDK import.
+public typealias SelectedSignerEntry = OZSelectedSigner
 
 /// Context rule type discriminant (default, call-contract, create-contract).
 ///
-/// Re-exported so the builder submission pipeline can reference `ContextRuleType`
+/// Re-exported so the builder submission pipeline can reference `OZContextRuleType`
 /// without a per-file SDK import.
-public typealias ContextRuleType = stellarsdk.ContextRuleType
+public typealias OZContextRuleType = stellarsdk.OZContextRuleType
 
 /// OZ smart-account byte-size constants (Ed25519 seed/pubkey, secp256r1 pubkey).
 ///
@@ -102,6 +102,6 @@ public typealias ScVal = SCValXDR
 
 /// SDK wallet-layer exception base class.
 ///
-/// Re-exported so components that throw `WalletException.NotConnected` can do
+/// Re-exported so components that throw `SmartAccountWalletException.NotConnected` can do
 /// so without a per-file SDK import.
-public typealias WalletError = WalletException
+public typealias WalletError = SmartAccountWalletException

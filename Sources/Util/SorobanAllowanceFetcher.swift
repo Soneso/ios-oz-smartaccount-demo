@@ -20,15 +20,13 @@ import stellarsdk
 /// at the DEMO-token call site (the allowance is expressed in the token's
 /// smallest unit, not in XLM). Simulation failures are surfaced to the
 /// caller as a thrown `BalanceFetchError`.
+///
+/// A short-lived `SorobanServer` is created from `DemoConfig.rpcURL` for each
+/// call and discarded after the simulation completes.
 public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
 
-    private let kit: OZSmartAccountKit
-
-    /// Creates a fetcher bound to the given kit. The kit's `sorobanServer` is
-    /// reused so the same network and RPC endpoint are queried.
-    public init(kit: OZSmartAccountKit) {
-        self.kit = kit
-    }
+    /// Creates a fetcher. RPC calls target `DemoConfig.rpcURL`.
+    public init() {}
 
     public func fetchAllowance(
         tokenContract: String,
@@ -62,7 +60,8 @@ public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
             smartAccountContractId: smartAccountContractId,
             spenderAddress: spenderAddress
         )
-        let simResponse = await kit.sorobanServer.simulateTransaction(
+        let server = SorobanServer(endpoint: DemoConfig.rpcURL)
+        let simResponse = await server.simulateTransaction(
             simulateTxRequest: SimulateTransactionRequest(transaction: transaction)
         )
         switch simResponse {
@@ -102,16 +101,10 @@ public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
             accountId: SACBalanceFetcher.simulationSourceAddress,
             sequenceNumber: 0
         )
-        let nowSeconds = UInt64(Date().timeIntervalSince1970)
-        let timeBounds = TimeBounds(
-            minTime: 0,
-            maxTime: nowSeconds + UInt64(kit.config.timeoutInSeconds)
-        )
         return try Transaction(
             sourceAccount: sourceAccount,
             operations: [invokeOp],
-            memo: Memo.none,
-            preconditions: TransactionPreconditions(timeBounds: timeBounds)
+            memo: Memo.none
         )
     }
 

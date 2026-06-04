@@ -28,9 +28,9 @@ public struct SignerEntry: Sendable {
     ///
     /// Order preserved from the rule fetch (numerically ascending id, as
     /// returned by `OZContextRuleManager.listContextRules()`).
-    public let contextRules: [ParsedContextRule]
+    public let contextRules: [OZParsedContextRule]
 
-    public init(signer: any OZSmartAccountSigner, contextRules: [ParsedContextRule]) {
+    public init(signer: any OZSmartAccountSigner, contextRules: [OZParsedContextRule]) {
         self.signer = signer
         self.contextRules = contextRules
     }
@@ -83,7 +83,7 @@ public final class AccountSignersFlow {
     ///   - demoState: Shared observable demo state, queried for connection state only.
     ///   - activityLog: Shared activity log; receives one info entry per successful load.
     ///   - contextRuleManager: Adapter over `OZContextRuleManager`. `nil` causes
-    ///     `loadAccountSigners()` to throw `WalletException.NotConnected`.
+    ///     `loadAccountSigners()` to throw `SmartAccountWalletException.NotConnected`.
     public init(
         demoState: DemoState,
         activityLog: ActivityLogState,
@@ -104,12 +104,12 @@ public final class AccountSignersFlow {
     ///
     /// - Returns: One `SignerEntry` per unique signer, ordered by first
     ///   appearance across the rule list.
-    /// - Throws: `WalletException.NotConnected` when there is no connected
+    /// - Throws: `SmartAccountWalletException.NotConnected` when there is no connected
     ///   wallet; the underlying SDK error when the rule fetch fails.
     public func loadAccountSigners() async throws -> [SignerEntry] {
         guard !isLoading else { return [] }
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isLoading = true
         defer { isLoading = false }
@@ -131,11 +131,11 @@ public final class AccountSignersFlow {
     /// Deduplicates the union of signers across `rules` by signer key and
     /// preserves insertion order. For each unique signer, collects the rules
     /// whose `signers` list contains an entry with the same key.
-    private func aggregate(rules: [ParsedContextRule]) -> [SignerEntry] {
+    private func aggregate(rules: [OZParsedContextRule]) -> [SignerEntry] {
         var seen: Set<String> = []
         var keysInOrder: [String] = []
         var signerByKey: [String: any OZSmartAccountSigner] = [:]
-        var rulesByKey: [String: [ParsedContextRule]] = [:]
+        var rulesByKey: [String: [OZParsedContextRule]] = [:]
 
         for rule in rules {
             for signer in rule.signers {

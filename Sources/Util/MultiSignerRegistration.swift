@@ -53,7 +53,7 @@ public enum MultiSignerRegistrationError: Error, LocalizedError, Sendable {
 ///    the secret keys supplied by the signer picker, asserting that each
 ///    derived address matches the address the picker reported.
 /// 2. Convert the user-selected ``OZSmartAccountSigner`` objects to the
-///    SDK's ``SelectedSigner`` value type, accepting WebAuthn passkeys and
+///    SDK's ``OZSelectedSigner`` value type, accepting WebAuthn passkeys and
 ///    delegated G-address signers.
 /// 3. Load the union of signers across every on-chain context rule (used by
 ///    the screen to decide between the single-signer fast path and the
@@ -290,16 +290,16 @@ public enum MultiSignerRegistration {
     // -------------------------------------------------------------------------
 
     /// Converts user-selected ``OZSmartAccountSigner`` objects to the SDK's
-    /// ``SelectedSigner`` representation.
+    /// ``OZSelectedSigner`` representation.
     ///
     /// Accepted shapes:
     /// - ``OZExternalSigner`` carrying a WebAuthn credential ID →
-    ///   ``SelectedSigner/passkey(credentialId:credentialIdBytes:keyData:transports:)``.
+    ///   ``OZSelectedSigner/passkey(credentialId:credentialIdBytes:keyData:transports:)``.
     ///   The stored credential's WebAuthn `transports` are looked up by
     ///   credential ID through `credentialManager` and forwarded as transport
     ///   hints (used to drive cross-device / hybrid passkey selection on
     ///   platforms that honour the hint).
-    /// - ``OZDelegatedSigner`` → ``SelectedSigner/wallet(accountId:)``.
+    /// - ``OZDelegatedSigner`` → ``OZSelectedSigner/wallet(accountId:)``.
     ///
     /// Other shapes are handled per the supplied
     /// ``MultiSignerRegistration/UnsupportedShapePolicy``:
@@ -318,7 +318,7 @@ public enum MultiSignerRegistration {
     ///     fallback.
     ///   - unsupportedShapePolicy: What to do with shapes that match neither
     ///     accepted case. Defaults to ``UnsupportedShapePolicy/skip``.
-    /// - Returns: ``SelectedSigner`` list in the same order as `signers`,
+    /// - Returns: ``OZSelectedSigner`` list in the same order as `signers`,
     ///   minus any entries that were skipped per the policy.
     /// - Throws: ``MultiSignerRegistrationError/unsupportedSignerKind(description:)``
     ///   when an unsupported shape is encountered and `unsupportedShapePolicy`
@@ -327,8 +327,8 @@ public enum MultiSignerRegistration {
         _ signers: [any OZSmartAccountSigner],
         credentialManager: OZCredentialManager?,
         unsupportedShapePolicy: UnsupportedShapePolicy = .skip
-    ) async throws -> [SelectedSigner] {
-        var result: [SelectedSigner] = []
+    ) async throws -> [OZSelectedSigner] {
+        var result: [OZSelectedSigner] = []
         result.reserveCapacity(signers.count)
         for signer in signers {
             if let converted = try await convertSigner(
@@ -342,7 +342,7 @@ public enum MultiSignerRegistration {
         return result
     }
 
-    /// Converts a single ``OZSmartAccountSigner`` to its ``SelectedSigner``
+    /// Converts a single ``OZSmartAccountSigner`` to its ``OZSelectedSigner``
     /// representation, applying `unsupportedShapePolicy` for shapes that
     /// match neither accepted case. Returns `nil` to signal that the entry
     /// should be skipped (when policy is ``UnsupportedShapePolicy/skip``);
@@ -352,7 +352,7 @@ public enum MultiSignerRegistration {
         _ signer: any OZSmartAccountSigner,
         credentialManager: OZCredentialManager?,
         unsupportedShapePolicy: UnsupportedShapePolicy
-    ) async throws -> SelectedSigner? {
+    ) async throws -> OZSelectedSigner? {
         if let external = signer as? OZExternalSigner {
             // Distinguish passkey (keyData > 65 bytes — has embedded credential ID)
             // from Ed25519 (keyData == 32 bytes).
@@ -396,7 +396,7 @@ public enum MultiSignerRegistration {
     private static func handleUnsupported(
         description: String,
         policy: UnsupportedShapePolicy
-    ) throws -> SelectedSigner? {
+    ) throws -> OZSelectedSigner? {
         switch policy {
         case .skip:
             return nil

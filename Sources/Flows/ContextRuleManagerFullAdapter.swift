@@ -23,7 +23,7 @@ public protocol SmartAccountExecutorType: Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult
+    ) async throws -> OZTransactionResult
 
     /// Multi-signer execution of `target.targetFn(targetArgs)` through the
     /// connected smart account.
@@ -31,8 +31,8 @@ public protocol SmartAccountExecutorType: Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 }
 
 // ============================================================================
@@ -59,7 +59,7 @@ public struct SmartAccountExecutorAdapter: SmartAccountExecutorType, Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         return try await transactionOperations.executeAndSubmit(
             target: target,
             targetFn: targetFn,
@@ -71,8 +71,8 @@ public struct SmartAccountExecutorAdapter: SmartAccountExecutorType, Sendable {
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await multiSignerManager.multiSignerExecuteAndSubmit(
             target: target,
             targetFn: targetFn,
@@ -116,14 +116,14 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
         )
     }
 
-    public func listContextRules() async throws -> [ParsedContextRule] {
+    public func listContextRules() async throws -> [OZParsedContextRule] {
         return try await contextRuleManager.listContextRules()
     }
 
     public func removeContextRule(
         ruleId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await contextRuleManager.removeContextRule(
             id: ruleId,
             selectedSigners: selectedSigners
@@ -136,13 +136,13 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
 
     // swiftlint:disable function_parameter_count
     public func addContextRule(
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         name: String,
         validUntil: UInt32?,
         signers: [any OZSmartAccountSigner],
         policies: [String: SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await contextRuleManager.addContextRule(
             contextType: contextType,
             name: name,
@@ -161,8 +161,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     public func updateContextRuleName(
         ruleId: UInt32,
         newName: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await contextRuleManager.updateName(
             id: ruleId,
             name: newName,
@@ -173,8 +173,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     public func updateContextRuleValidUntil(
         ruleId: UInt32,
         newValidUntil: UInt32?,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await contextRuleManager.updateValidUntil(
             id: ruleId,
             validUntil: newValidUntil,
@@ -185,8 +185,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     public func addDelegatedSignerToRule(
         ruleId: UInt32,
         address: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await signerManager.addDelegated(
             contextRuleId: ruleId,
             address: address,
@@ -198,8 +198,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
         ruleId: UInt32,
         verifierAddress: String,
         publicKey: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await signerManager.addEd25519(
             contextRuleId: ruleId,
             verifierAddress: verifierAddress,
@@ -212,8 +212,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
         ruleId: UInt32,
         publicKey: Data,
         credentialId: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await signerManager.addPasskey(
             contextRuleId: ruleId,
             publicKey: publicKey,
@@ -225,8 +225,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     public func removeSignerFromRule(
         ruleId: UInt32,
         signerId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await signerManager.removeSigner(
             contextRuleId: ruleId,
             signerId: signerId,
@@ -238,8 +238,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
         ruleId: UInt32,
         policyAddress: String,
         installParams: SCValXDR,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await policyManager.addPolicy(
             contextRuleId: ruleId,
             policyAddress: policyAddress,
@@ -251,8 +251,8 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     public func removePolicyFromRule(
         ruleId: UInt32,
         policyId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return try await policyManager.removePolicy(
             contextRuleId: ruleId,
             policyId: policyId,

@@ -219,15 +219,13 @@ public final class MainScreenFlow {
     /// error here is not fatal to the session.
     public func refreshBalances() async {
         guard demoState.isConnected, let contractId = demoState.contractId else { return }
-        guard let kit = demoState.kit else { return }
 
         activityLog.info("Refreshing balances…")
 
         do {
             let xlm = try await fetchTokenBalance(
                 contractAddress: DemoConfig.nativeTokenContract,
-                accountAddress: contractId,
-                kit: kit
+                accountAddress: contractId
             )
             demoState.setXlmBalance(formatStroopsAsXlm(xlm))
         } catch {
@@ -239,8 +237,7 @@ public final class MainScreenFlow {
             do {
                 let demo = try await fetchTokenBalance(
                     contractAddress: demoContractId,
-                    accountAddress: contractId,
-                    kit: kit
+                    accountAddress: contractId
                 )
                 demoState.setDemoTokenBalance(formatStroopsAsXlm(demo))
             } catch {
@@ -379,7 +376,7 @@ public final class MainScreenFlow {
     /// - `BootstrapError.providerMissing` when the App entry point did not
     ///   inject the providers (programming error; should never happen in
     ///   production).
-    /// - `ConfigurationException` when `DemoConfig` constants are invalid.
+    /// - `SmartAccountConfigurationException` when `DemoConfig` constants are invalid.
     private func buildKit(
         walletAdapter: ExternalSignerManagerAdapter,
         ed25519Adapter: DemoEd25519Adapter
@@ -431,23 +428,23 @@ public final class MainScreenFlow {
         }
     }
 
-    /// Maps a `SmartAccountEvent` to an activity log entry.
+    /// Maps an `OZSmartAccountEvent` to an activity log entry.
     ///
     /// Credential IDs are truncated via `ActivityLogState.redactCredentialId`.
     /// Transaction hashes are allowed in full (they are public on-chain data).
     /// All other values are included without redaction unless they carry
     /// preimage-like content (which is never present in the event payloads
     /// below).
-    private func handleKitEvent(_ event: SmartAccountEvent) {
+    private func handleKitEvent(_ event: OZSmartAccountEvent) {
         let (level, message) = Self.describeKitEvent(event)
         activityLog.addEntry(message, level: level)
     }
 
-    /// Converts a `SmartAccountEvent` to a `(LogLevel, String)` pair.
+    /// Converts an `OZSmartAccountEvent` to a `(LogLevel, String)` pair.
     ///
     /// Extracted as a pure static function so `handleKitEvent` stays to 2 lines
     /// and SwiftLint complexity/body-length limits are met without suppression.
-    private static func describeKitEvent(_ event: SmartAccountEvent) -> (LogLevel, String) {
+    private static func describeKitEvent(_ event: OZSmartAccountEvent) -> (LogLevel, String) {
         switch event {
         case .walletConnected(let contractId, let credentialId):
             let safeCredId = ActivityLogState.redactCredentialId(credentialId)
@@ -498,7 +495,7 @@ public final class MainScreenFlow {
     /// Invokes `balance(id: <accountAddress>)` on a SAC token contract and returns
     /// the result as an `Int128` stroop amount.
     ///
-    /// Delegates to `SACBalanceFetcher.fetchBalance(contract:account:kit:)` so
+    /// Delegates to `SACBalanceFetcher.fetchBalance(contract:account:)` so
     /// the simulation envelope construction, i128 decoding, and source-account
     /// selection are maintained in a single place shared with other callers.
     ///
@@ -508,13 +505,11 @@ public final class MainScreenFlow {
     ///   as an `i128` SCVal.
     private func fetchTokenBalance(
         contractAddress: String,
-        accountAddress: String,
-        kit: OZSmartAccountKit
+        accountAddress: String
     ) async throws -> Int128 {
         return try await SACBalanceFetcher.fetchBalance(
             contract: contractAddress,
-            account: accountAddress,
-            kit: kit
+            account: accountAddress
         )
     }
 }

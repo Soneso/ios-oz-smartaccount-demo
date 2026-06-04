@@ -16,7 +16,7 @@ public extension ContextRuleFlow {
     // MARK: - loadParsedContextRule
     // -------------------------------------------------------------------------
 
-    /// Fetches a single ``ParsedContextRule`` for the supplied identifier.
+    /// Fetches a single ``OZParsedContextRule`` for the supplied identifier.
     ///
     /// Implemented as a filter over ``listContextRules()`` so the screen can
     /// reuse the same parsing path as the read-only list. Throws if
@@ -24,14 +24,14 @@ public extension ContextRuleFlow {
     /// between screen load and edit dispatch).
     ///
     /// - Parameter ruleId: The on-chain rule identifier to load.
-    /// - Returns: The matching ``ParsedContextRule``.
-    /// - Throws: ``WalletException/NotConnected`` when no wallet is connected,
+    /// - Returns: The matching ``OZParsedContextRule``.
+    /// - Throws: ``SmartAccountWalletException/NotConnected`` when no wallet is connected,
     ///   any SDK error raised by `listContextRules`, or
     ///   ``ContextRuleFlowError/missingOnChainIdentifier(entity:)`` when the
     ///   rule cannot be found on chain.
-    func loadParsedContextRule(ruleId: UInt32) async throws -> ParsedContextRule {
+    func loadParsedContextRule(ruleId: UInt32) async throws -> OZParsedContextRule {
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         let rules = try await manager.listContextRules()
         guard let match = rules.first(where: { $0.id == ruleId }) else {
@@ -146,20 +146,20 @@ public extension ContextRuleFlow {
     ///     operation begins. The label format mirrors the inventory copy.
     /// - Returns: ``ContextRuleEditResult`` describing the outcome.
     /// - Throws: ``ContextRuleFlowError/editAlreadyInProgress`` on reentry;
-    ///   ``WalletException/NotConnected`` when no wallet is connected. Per-step
+    ///   ``SmartAccountWalletException/NotConnected`` when no wallet is connected. Per-step
     ///   SDK errors are captured in the returned result rather than rethrown,
     ///   except cancellations which propagate so the caller can render
     ///   "Passkey authentication cancelled".
     func submitContextRuleEdits(
         diff: ContextRuleEditDiff,
-        selectedSigners: [SelectedSigner],
+        selectedSigners: [OZSelectedSigner],
         onProgress: @MainActor @Sendable (String) -> Void
     ) async throws -> ContextRuleEditResult {
         guard !isEditing else {
             throw ContextRuleFlowError.editAlreadyInProgress
         }
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isEditing = true
         defer { isEditing = false }

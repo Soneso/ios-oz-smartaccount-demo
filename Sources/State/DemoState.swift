@@ -64,7 +64,7 @@ public final class DemoState: ObservableObject {
     ///
     /// Injected at app startup. Never UserDefaults — those are not encrypted
     /// at rest. See PASSKEY_SETUP.md for the iOS/macOS storage security model.
-    public private(set) var storage: StorageAdapter?
+    public private(set) var storage: OZStorageAdapter?
 
     /// Platform external wallet connector.
     ///
@@ -173,7 +173,7 @@ public final class DemoState: ObservableObject {
     /// Sets the platform storage adapter.
     ///
     /// Must be called once, in the App entry point's init(), before any view body runs.
-    public func setStorage(_ adapter: StorageAdapter?) {
+    public func setStorage(_ adapter: OZStorageAdapter?) {
         storage = adapter
     }
 

@@ -36,9 +36,9 @@ extension AdapterError: LocalizedError {
 // MARK: - ExternalSignerManagerAdapter
 // ============================================================================
 
-/// Bridges `WalletConnector` to the SDK's `ExternalWalletAdapter`.
+/// Bridges `WalletConnector` to the SDK's `OZExternalWalletAdapter`.
 ///
-/// The SDK's `OZExternalSignerManager` calls `ExternalWalletAdapter.signAuthEntry(preimageXdr:options:)`.
+/// The SDK's `OZExternalSignerManager` calls `OZExternalWalletAdapter.signAuthEntry(preimageXdr:options:)`.
 /// This adapter:
 /// 1. Checks if the active `WalletConnector` is connected for the requested address. If so,
 ///    forwards to `WalletConnector.signAuthEntry(authEntryXdr:contextRuleIds:)` and returns
@@ -61,7 +61,7 @@ extension AdapterError: LocalizedError {
 // @unchecked-justified: all mutable state (`_walletConnector`, `contextRuleIds`) is
 // protected by `stateLock` (NSLock) via computed property accessors and explicit lock
 // calls; no mutable state escapes outside the lock.
-public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @unchecked Sendable {
+public final class ExternalSignerManagerAdapter: OZExternalWalletAdapter, @unchecked Sendable {
 
     // -------------------------------------------------------------------------
     // MARK: - State (protected by stateLock)
@@ -125,11 +125,11 @@ public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @uncheck
     }
 
     // -------------------------------------------------------------------------
-    // MARK: - ExternalWalletAdapter
+    // MARK: - OZExternalWalletAdapter
     // -------------------------------------------------------------------------
 
     /// Not used — wallets are connected through the `WalletConnector` before the adapter is consulted.
-    public func connect() async throws -> ConnectedWallet? {
+    public func connect() async throws -> OZConnectedWallet? {
         return nil
     }
 
@@ -146,13 +146,13 @@ public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @uncheck
     /// Returns the set of currently connected wallet addresses.
     ///
     /// Only surfaces the active wallet connector's address (if connected).
-    public func getConnectedWallets() -> [ConnectedWallet] {
+    public func getConnectedWallets() -> [OZConnectedWallet] {
         let (address, meta) = stateLock.withLock { () -> (String?, WalletMetadata?) in
             guard let connector = _walletConnector else { return (nil, nil) }
             return (connector.connectedAddress, connector.walletMetadata)
         }
         guard let address, let meta else { return [] }
-        return [ConnectedWallet(
+        return [OZConnectedWallet(
             address: address,
             walletId: "reown",
             walletName: meta.name
@@ -167,18 +167,18 @@ public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @uncheck
     }
 
     /// Returns wallet connection info for the given address, or nil if not a wallet signer.
-    public func getWalletForAddress(address: String) -> ConnectedWallet? {
+    public func getWalletForAddress(address: String) -> OZConnectedWallet? {
         let meta = stateLock.withLock { () -> WalletMetadata? in
             guard let connector = _walletConnector,
                   connector.connectedAddress == address else { return nil }
             return connector.walletMetadata
         }
         guard let meta else { return nil }
-        return ConnectedWallet(address: address, walletId: "reown", walletName: meta.name)
+        return OZConnectedWallet(address: address, walletId: "reown", walletName: meta.name)
     }
 
     /// Reconnection is not supported; the wallet must re-pair via `connect()`.
-    public func reconnect(walletId: String) async throws -> ConnectedWallet? {
+    public func reconnect(walletId: String) async throws -> OZConnectedWallet? {
         return nil
     }
 
@@ -196,8 +196,8 @@ public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @uncheck
     ///   - options: `options.address` identifies which signer to use.
     public func signAuthEntry(
         preimageXdr: String,
-        options: SignAuthEntryOptions?
-    ) async throws -> SignAuthEntryResult {
+        options: OZSignAuthEntryOptions?
+    ) async throws -> OZSignAuthEntryResult {
 
         let address = options?.address ?? ""
 
@@ -216,7 +216,7 @@ public final class ExternalSignerManagerAdapter: ExternalWalletAdapter, @uncheck
             contextRuleIds: ruleIds
         )
 
-        return SignAuthEntryResult(
+        return OZSignAuthEntryResult(
             signedAuthEntry: signed.signedAuthEntry,
             signerAddress: signed.signerAddress
         )

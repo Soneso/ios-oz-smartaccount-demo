@@ -47,7 +47,7 @@ enum SignerAvailability {
     /// - Returns: One `TransferSignerInfo` per unique signer, preserving the
     ///   order produced by `collectUniqueSigners`.
     static func extractSigners(
-        rules: [ParsedContextRule],
+        rules: [OZParsedContextRule],
         connectedCredentialId: String?,
         manager: OZExternalSignerManager?
     ) async -> [TransferSignerInfo] {

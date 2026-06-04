@@ -124,7 +124,7 @@ public enum DemoFlowFactory {
             contractOps = ContractCallOperationsAdapter(kit.transactionOperations)
             multiOps = MultiSignerContractCallAdapter(kit.multiSignerManager)
             ctxManager = ContextRuleManagerAdapter(kit.contextRuleManagerConcrete)
-            allowanceFetcher = SorobanAllowanceFetcher(kit: kit)
+            allowanceFetcher = SorobanAllowanceFetcher()
         } else {
             contractOps = NoOpContractCallOperations()
             multiOps = NoOpMultiSignerContractCall()

@@ -77,7 +77,7 @@ struct SmartAccountDemoMacApp: App {
             // ceremonies will fail at point-of-use with an actionable error.
             activityLog.error("Bootstrap: AppleWebAuthnProvider init failed — \(ActivityLogState.redact(actionableMessage(for: error)))")
         }
-        let storage = KeychainStorageAdapter()
+        let storage = OZKeychainStorageAdapter()
         demoState.setStorage(storage)
 
         // The macOS target does not link Reown; inject the no-op connector so

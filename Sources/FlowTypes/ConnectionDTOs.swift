@@ -10,11 +10,11 @@ import stellarsdk
 // MARK: - WalletConnectOptions
 // ============================================================================
 
-/// Demo-layer equivalent of the SDK's `ConnectWalletOptions`.
+/// Demo-layer equivalent of the SDK's `OZConnectWalletOptions`.
 ///
 /// Isolates `ConnectionOperationsType` from the SDK type so the protocol and
 /// its mock implementations do not require `import stellarsdk`. The production
-/// adapter `ConnectionOperationsAdapter` converts this to `ConnectWalletOptions`
+/// adapter `ConnectionOperationsAdapter` converts this to `OZConnectWalletOptions`
 /// before forwarding to the SDK.
 public struct WalletConnectOptions: Sendable, Equatable {
 
@@ -36,9 +36,9 @@ public struct WalletConnectOptions: Sendable, Equatable {
         self.prompt = prompt
     }
 
-    /// Converts to the SDK `ConnectWalletOptions`.
-    public func toSDK() -> ConnectWalletOptions {
-        ConnectWalletOptions(
+    /// Converts to the SDK `OZConnectWalletOptions`.
+    public func toSDK() -> OZConnectWalletOptions {
+        OZConnectWalletOptions(
             credentialId: credentialId,
             contractId: contractId,
             prompt: prompt
@@ -52,7 +52,7 @@ public struct WalletConnectOptions: Sendable, Equatable {
 
 /// Demo-layer DTO carrying the credential ID returned by a WebAuthn ceremony.
 ///
-/// Isolates `ConnectionOperationsType` from the SDK's `AuthenticatePasskeyResult`,
+/// Isolates `ConnectionOperationsType` from the SDK's `OZAuthenticatePasskeyResult`,
 /// which carries full signature material not needed by the connection flow.
 public struct PasskeyCredential: Sendable {
 
@@ -71,7 +71,7 @@ public struct PasskeyCredential: Sendable {
 
 /// Demo-layer DTO for the outcome of deploying a pending credential.
 ///
-/// Isolates `ConnectionOperationsType` from the SDK's `DeployPendingResult`.
+/// Isolates `ConnectionOperationsType` from the SDK's `OZDeployPendingResult`.
 public struct PendingDeployResult: Sendable {
 
     /// Smart account contract address (`C…` strkey).
@@ -91,9 +91,9 @@ public struct PendingDeployResult: Sendable {
 // MARK: - Conversion helpers
 // ============================================================================
 
-extension ConnectWalletResult {
+extension OZConnectWalletResult {
 
-    /// Maps the SDK `ConnectWalletResult` to the demo-layer `ConnectionResult`.
+    /// Maps the SDK `OZConnectWalletResult` to the demo-layer `ConnectionResult`.
     ///
     /// `isDeployed` defaults to `false`; callers that probe on-chain existence
     /// overwrite this in the flow.
@@ -112,17 +112,17 @@ extension ConnectWalletResult {
     }
 }
 
-extension AuthenticatePasskeyResult {
+extension OZAuthenticatePasskeyResult {
 
-    /// Maps the SDK `AuthenticatePasskeyResult` to `PasskeyCredential`.
+    /// Maps the SDK `OZAuthenticatePasskeyResult` to `PasskeyCredential`.
     public var asPasskeyCredential: PasskeyCredential {
         PasskeyCredential(credentialId: credentialId)
     }
 }
 
-extension DeployPendingResult {
+extension OZDeployPendingResult {
 
-    /// Maps the SDK `DeployPendingResult` to `PendingDeployResult`.
+    /// Maps the SDK `OZDeployPendingResult` to `PendingDeployResult`.
     public var asPendingDeployResult: PendingDeployResult {
         PendingDeployResult(contractId: contractId, transactionHash: transactionHash)
     }

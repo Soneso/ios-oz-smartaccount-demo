@@ -47,14 +47,12 @@ public enum SACBalanceFetcher {
 
     /// Fetches the SAC `balance(id: <account>)` for the given contract and account.
     ///
-    /// Simulation is performed via the kit's `SorobanServer`. The time bounds on
-    /// the simulation envelope use `kit.config.timeoutInSeconds` so the envelope
-    /// remains valid for the same window used by all other kit operations.
+    /// Creates a short-lived `SorobanServer` for the read using `DemoConfig.rpcURL`
+    /// and discards it after the simulation completes. No kit instance is required.
     ///
     /// - Parameters:
     ///   - contract: SAC token contract address (C-strkey).
     ///   - account: Smart account contract address (C-strkey) whose balance to read.
-    ///   - kit: Active `OZSmartAccountKit` providing the Soroban RPC server and config.
     /// - Returns: Balance as `Int128` stroops, preserving the full signed 128-bit
     ///   on-chain range without truncation or sentinel substitution. Pair with
     ///   ``formatStroopsAsXlm(_:)-(Int128)`` to render the value as a display string.
@@ -65,15 +63,13 @@ public enum SACBalanceFetcher {
     ///   - `StellarSDKError` variants from address/account construction on malformed inputs.
     public static func fetchBalance(
         contract: String,
-        account: String,
-        kit: OZSmartAccountKit
+        account: String
     ) async throws -> Int128 {
         let transaction = try buildBalanceTransaction(
             contractAddress: contract,
-            accountAddress: account,
-            kit: kit
+            accountAddress: account
         )
-        let simulation = try await simulate(transaction: transaction, kit: kit)
+        let simulation = try await simulate(transaction: transaction)
         return try decodeI128Result(simulation)
     }
 
@@ -85,13 +81,12 @@ public enum SACBalanceFetcher {
     /// a SAC token contract.
     ///
     /// The `id` argument is a `contract`-variant `Address` SCVal wrapping the
-    /// smart account's C-strkey. The time bounds are derived from
-    /// `kit.config.timeoutInSeconds` to match the timeout window used by the kit's
-    /// own transaction submissions.
+    /// smart account's C-strkey. No time bounds are set — this transaction is
+    /// only passed to `simulateTransaction` and never submitted on-chain; the
+    /// network enforces time bounds only at submission.
     private static func buildBalanceTransaction(
         contractAddress: String,
-        accountAddress: String,
-        kit: OZSmartAccountKit
+        accountAddress: String
     ) throws -> Transaction {
         let accountAddrXDR = try SCAddressXDR(contractId: accountAddress)
         let addressArg = SCValXDR.address(accountAddrXDR)
@@ -108,16 +103,10 @@ public enum SACBalanceFetcher {
             accountId: simulationSourceAddress,
             sequenceNumber: 0
         )
-        let nowSeconds = UInt64(Date().timeIntervalSince1970)
-        let timeBounds = TimeBounds(
-            minTime: 0,
-            maxTime: nowSeconds + UInt64(kit.config.timeoutInSeconds)
-        )
         return try Transaction(
             sourceAccount: sourceAccount,
             operations: [invokeOp],
-            memo: Memo.none,
-            preconditions: TransactionPreconditions(timeBounds: timeBounds)
+            memo: Memo.none
         )
     }
 
@@ -125,16 +114,16 @@ public enum SACBalanceFetcher {
     // MARK: - Private: simulation
     // -------------------------------------------------------------------------
 
-    /// Sends the transaction to the Soroban RPC simulation endpoint and returns
-    /// the unwrapped success result.
+    /// Creates a short-lived `SorobanServer` from `DemoConfig.rpcURL`, sends the
+    /// simulation request, and returns the unwrapped success result.
     ///
     /// - Throws: `BalanceFetchError.simulationFailed` on any RPC or contract error.
     private static func simulate(
-        transaction: Transaction,
-        kit: OZSmartAccountKit
+        transaction: Transaction
     ) async throws -> SimulateTransactionResponse {
+        let server = SorobanServer(endpoint: DemoConfig.rpcURL)
         let simRequest = SimulateTransactionRequest(transaction: transaction)
-        let simResponse = await kit.sorobanServer.simulateTransaction(
+        let simResponse = await server.simulateTransaction(
             simulateTxRequest: simRequest
         )
         switch simResponse {

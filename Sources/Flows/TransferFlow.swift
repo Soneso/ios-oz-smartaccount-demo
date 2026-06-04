@@ -71,8 +71,8 @@ public protocol TransactionOperationsType: Sendable {
         tokenContract: String,
         recipient: String,
         amount: String,
-        forceMethod: SubmissionMethod?
-    ) async throws -> TransactionResult
+        forceMethod: OZSubmissionMethod?
+    ) async throws -> OZTransactionResult
 }
 
 // ============================================================================
@@ -92,8 +92,8 @@ public struct TransactionOperationsAdapter: TransactionOperationsType, Sendable 
         tokenContract: String,
         recipient: String,
         amount: String,
-        forceMethod: SubmissionMethod?
-    ) async throws -> TransactionResult {
+        forceMethod: OZSubmissionMethod?
+    ) async throws -> OZTransactionResult {
         return try await inner.transfer(
             tokenContract: tokenContract,
             recipient: recipient,
@@ -117,10 +117,10 @@ public protocol MultiSignerManagerType: Sendable {
         tokenContract: String,
         recipient: String,
         amount: String,
-        selectedSigners: [SelectedSigner],
-        forceMethod: SubmissionMethod?,
-        resolveContextRuleIds: ResolveContextRuleIds?
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner],
+        forceMethod: OZSubmissionMethod?,
+        resolveContextRuleIds: OZResolveContextRuleIds?
+    ) async throws -> OZTransactionResult
 }
 
 // ============================================================================
@@ -141,10 +141,10 @@ public struct MultiSignerManagerAdapter: MultiSignerManagerType, Sendable {
         tokenContract: String,
         recipient: String,
         amount: String,
-        selectedSigners: [SelectedSigner],
-        forceMethod: SubmissionMethod?,
-        resolveContextRuleIds: ResolveContextRuleIds?
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner],
+        forceMethod: OZSubmissionMethod?,
+        resolveContextRuleIds: OZResolveContextRuleIds?
+    ) async throws -> OZTransactionResult {
         return try await inner.multiSignerTransfer(
             tokenContract: tokenContract,
             recipient: recipient,
@@ -166,7 +166,7 @@ public struct MultiSignerManagerAdapter: MultiSignerManagerType, Sendable {
 public protocol ContextRuleManagerType: Sendable {
 
     /// Fetches all context rules from the connected smart account.
-    func listContextRules() async throws -> [ParsedContextRule]
+    func listContextRules() async throws -> [OZParsedContextRule]
 }
 
 // ============================================================================
@@ -182,7 +182,7 @@ public struct ContextRuleManagerAdapter: ContextRuleManagerType, Sendable {
         self.inner = inner
     }
 
-    public func listContextRules() async throws -> [ParsedContextRule] {
+    public func listContextRules() async throws -> [OZParsedContextRule] {
         return try await inner.listContextRules()
     }
 }
@@ -358,7 +358,7 @@ public final class TransferFlow {
     /// Before calling `multiSignerManager.multiSignerTransfer`, this method:
     /// 1. Registers each delegated signer's secret key via `kit.externalSigners.addFromSecret`.
     /// 2. Registers each Ed25519 signer's secret bytes via `kit.externalSigners.addEd25519FromRawKey`.
-    /// 3. Builds the `[SelectedSigner]` list from `chosenSigners`.
+    /// 3. Builds the `[OZSelectedSigner]` list from `chosenSigners`.
     ///
     /// On success, refreshes balances and returns a result.
     ///
@@ -442,7 +442,7 @@ public final class TransferFlow {
         delegatedSecrets: [String: String],
         ed25519Secrets: [Ed25519SecretKey: Data]
     ) async throws -> String {
-        let sdkResult: TransactionResult
+        let sdkResult: OZTransactionResult
         do {
             sdkResult = try await MultiSignerRegistration.registerInProcessSignersWithCleanup(
                 delegatedSecrets: delegatedSecrets,
@@ -510,14 +510,14 @@ public final class TransferFlow {
 
 /// Errors thrown by `TransferFlow` at the flow layer (not from the SDK).
 ///
-/// SDK errors (`WebAuthnException`, `ValidationException`, etc.) are propagated
+/// SDK errors (`WebAuthnException`, `SmartAccountValidationException`, etc.) are propagated
 /// directly without wrapping. These cases guard flow-level constraints only.
 public enum TransferFlowError: Error, Sendable {
 
     /// A transfer is already in progress. The re-entrancy guard rejected the second call.
     case alreadyInProgress
 
-    /// The SDK returned a non-success `TransactionResult` with the attached reason.
+    /// The SDK returned a non-success `OZTransactionResult` with the attached reason.
     /// The reason string is pre-redacted by `ActivityLogState.redact` before being stored.
     case transferFailed(reason: String)
 
@@ -555,9 +555,9 @@ struct NoOpTransactionOperations: TransactionOperationsType {
         tokenContract: String,
         recipient: String,
         amount: String,
-        forceMethod: SubmissionMethod?
-    ) async throws -> TransactionResult {
-        throw WalletException.NotConnected(message: "No wallet connected.")
+        forceMethod: OZSubmissionMethod?
+    ) async throws -> OZTransactionResult {
+        throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
     }
 }
 
@@ -569,10 +569,10 @@ struct NoOpMultiSignerManager: MultiSignerManagerType {
         tokenContract: String,
         recipient: String,
         amount: String,
-        selectedSigners: [SelectedSigner],
-        forceMethod: SubmissionMethod?,
-        resolveContextRuleIds: ResolveContextRuleIds?
-    ) async throws -> TransactionResult {
-        throw WalletException.NotConnected(message: "No wallet connected.")
+        selectedSigners: [OZSelectedSigner],
+        forceMethod: OZSubmissionMethod?,
+        resolveContextRuleIds: OZResolveContextRuleIds?
+    ) async throws -> OZTransactionResult {
+        throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
     }
 }

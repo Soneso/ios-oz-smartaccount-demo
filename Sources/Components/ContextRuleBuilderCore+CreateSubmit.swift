@@ -70,7 +70,7 @@ extension ContextRuleBuilderCore {
         )
     }
 
-    private func resolveContextType() -> ContextRuleType? {
+    private func resolveContextType() -> OZContextRuleType? {
         do {
             return try buildContextType()
         } catch {
@@ -108,7 +108,7 @@ extension ContextRuleBuilderCore {
         chosen: [any SmartAccountSignerProtocol],
         delegatedSecrets: [String: String],
         ed25519Secrets: [Ed25519SecretKey: Data],
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         validUntil: UInt32?,
         flowPolicies: [FlowPolicyEntry]
     ) async {
@@ -148,7 +148,7 @@ extension ContextRuleBuilderCore {
     // MARK: - Build context type
     // -------------------------------------------------------------------------
 
-    internal func buildContextType() throws -> ContextRuleType {
+    internal func buildContextType() throws -> OZContextRuleType {
         switch contextTypeOption {
         case .defaultRule:
             return .defaultRule

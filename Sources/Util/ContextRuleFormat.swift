@@ -60,12 +60,12 @@ public func signerDisplayIdentifier(for signer: any OZSmartAccountSigner) -> Str
 // MARK: - Context Type Labels
 // ============================================================================
 
-/// Returns a human-readable label for a `ContextRuleType`.
+/// Returns a human-readable label for an `OZContextRuleType`.
 ///
 /// - `defaultRule` → `"Default (Any Operation)"`
 /// - `callContract` → `"Call Contract: <truncated address>"`
 /// - `createContract` → `"Create Contract: <first 8 hex chars>..."`
-public func contextTypeLabel(for type: ContextRuleType) -> String {
+public func contextTypeLabel(for type: OZContextRuleType) -> String {
     switch type {
     case .defaultRule:
         return "Default (Any Operation)"

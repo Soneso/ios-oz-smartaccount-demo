@@ -128,13 +128,13 @@ extension WalletConnectorError: LocalizedError {
 
 /// Protocol for an external wallet connection that can sign OZ smart-account auth entries.
 ///
-/// This protocol is intentionally separate from the SDK's `ExternalWalletAdapter`:
+/// This protocol is intentionally separate from the SDK's `OZExternalWalletAdapter`:
 /// - `WalletConnector` speaks the demo-layer language (OZ auth entries with context rule IDs,
 ///   rich metadata, platform-aware errors).
-/// - `ExternalWalletAdapter` speaks the SDK's language (raw `HashIDPreimage` XDR,
-///   generic `SignAuthEntryResult`).
+/// - `OZExternalWalletAdapter` speaks the SDK's language (raw `HashIDPreimage` XDR,
+///   generic `OZSignAuthEntryResult`).
 ///
-/// `ExternalSignerManagerAdapter` bridges the two: it conforms to `ExternalWalletAdapter`
+/// `ExternalSignerManagerAdapter` bridges the two: it conforms to `OZExternalWalletAdapter`
 /// and holds a reference to the active `WalletConnector`, routing signing requests to it
 /// for wallet addresses while handling keypair addresses locally.
 ///

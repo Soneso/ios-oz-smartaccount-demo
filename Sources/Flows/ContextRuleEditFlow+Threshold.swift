@@ -38,7 +38,7 @@ extension ContextRuleFlow {
         ruleId: UInt32,
         entry: EditPolicyEntry,
         step: String,
-        selectedSigners: [SelectedSigner],
+        selectedSigners: [OZSelectedSigner],
         onProgress: @MainActor @Sendable (String) -> Void
     ) async -> ModifyPolicyOutcome {
         onProgress("\(step) (set_threshold)...")
@@ -66,7 +66,7 @@ extension ContextRuleFlow {
         entry: EditPolicyEntry,
         step: String,
         preflight: ThresholdPreflight,
-        selectedSigners: [SelectedSigner]
+        selectedSigners: [OZSelectedSigner]
     ) async -> ModifyPolicyOutcome {
         let targetArgs: [SCValXDR] = [
             .u32(preflight.newThreshold),

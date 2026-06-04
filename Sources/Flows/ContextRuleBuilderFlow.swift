@@ -13,7 +13,7 @@ import stellarsdk
 
 /// Outcome of a context rule mutation (add, remove, update).
 ///
-/// `success`, `hash`, and `error` match the SDK's `TransactionResult` shape so
+/// `success`, `hash`, and `error` match the SDK's `OZTransactionResult` shape so
 /// the screen can render success / failure cards from a single value.
 public struct ContextRuleResult: Sendable, Equatable {
 
@@ -226,10 +226,10 @@ extension ContextRuleFlow {
     ///     any Ed25519 entries included in `selectedSigners`.
     /// - Returns: ``ContextRuleResult`` carrying success / hash / error.
     /// - Throws: ``ContextRuleFlowError/alreadyInProgress`` when reentered,
-    ///   ``WalletException/NotConnected`` when no wallet is connected, or any
+    ///   ``SmartAccountWalletException/NotConnected`` when no wallet is connected, or any
     ///   error thrown by the SDK.
     public func addContextRule(
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         name: String,
         validUntil: UInt32?,
         signers: [any OZSmartAccountSigner],
@@ -240,7 +240,7 @@ extension ContextRuleFlow {
     ) async throws -> ContextRuleResult {
         guard !isAdding else { throw ContextRuleFlowError.alreadyInProgress }
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isAdding = true
         defer { isAdding = false }
@@ -248,7 +248,7 @@ extension ContextRuleFlow {
         activityLog.info("Submitting new context rule...")
 
         let policiesMap = buildPoliciesMap(policies)
-        let built: [SelectedSigner]
+        let built: [OZSelectedSigner]
         do {
             built = try await MultiSignerRegistration.buildSelectedSigners(
                 selectedSigners,
@@ -258,7 +258,7 @@ extension ContextRuleFlow {
         } catch let MultiSignerRegistrationError.unsupportedSignerKind(description) {
             throw ContextRuleFlowError.unsupportedSignerKind(description: description)
         }
-        let sdkResult: TransactionResult
+        let sdkResult: OZTransactionResult
         do {
             sdkResult = try await MultiSignerRegistration.registerInProcessSignersWithCleanup(
                 delegatedSecrets: delegatedSecrets,
@@ -300,7 +300,7 @@ extension ContextRuleFlow {
         return policiesMap
     }
 
-    private func handleAddResult(_ sdkResult: TransactionResult) -> ContextRuleResult {
+    private func handleAddResult(_ sdkResult: OZTransactionResult) -> ContextRuleResult {
         if sdkResult.success {
             let hashFragment = sdkResult.hash.map { truncateAddress($0, chars: 8) } ?? "N/A"
             activityLog.success("Context rule created successfully. Hash: \(hashFragment)")

@@ -12,7 +12,7 @@ import stellarsdk
 
 /// Outcome of a single edit step. Tracked at flow scope so the orchestrator
 /// can assemble multi-step pipelines (for example the modified-policy
-/// remove + re-add pair) without bubbling the underlying `TransactionResult`.
+/// remove + re-add pair) without bubbling the underlying `OZTransactionResult`.
 internal enum EditStepOutcome {
     /// Step succeeded; carries the optional transaction hash.
     case ok(String?)
@@ -74,8 +74,8 @@ extension ContextRuleFlow {
         manager: any ContextRuleManagerFullType,
         ruleId: UInt32,
         entry: EditSignerEntry,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         if let delegated = entry.signer as? OZDelegatedSigner {
             return try await manager.addDelegatedSignerToRule(
                 ruleId: ruleId,
@@ -100,8 +100,8 @@ extension ContextRuleFlow {
         manager: any ContextRuleManagerFullType,
         ruleId: UInt32,
         external: OZExternalSigner,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         if external.verifierAddress == webAuthnVerifierAddress {
             // keyData layout: 65-byte SEC1 public key + credential ID bytes.
             let pkSize = SmartAccountConstants.secp256r1PublicKeySize
@@ -141,7 +141,7 @@ extension ContextRuleFlow {
     /// app.
     internal func runStep(
         step: String,
-        _ body: () async throws -> TransactionResult
+        _ body: () async throws -> OZTransactionResult
     ) async -> EditStepOutcome {
         do {
             let result = try await body()
@@ -173,7 +173,7 @@ extension ContextRuleFlow {
         ruleId: UInt32,
         entry: EditPolicyEntry,
         step: String,
-        selectedSigners: [SelectedSigner],
+        selectedSigners: [OZSelectedSigner],
         onProgress: @MainActor @Sendable (String) -> Void
     ) async -> ModifyPolicyOutcome {
         if entry.info?.type == "threshold" {
@@ -229,7 +229,7 @@ extension ContextRuleFlow {
         onChainId: UInt32,
         installParams: SCValXDR,
         step: String,
-        selectedSigners: [SelectedSigner],
+        selectedSigners: [OZSelectedSigner],
         onProgress: @MainActor @Sendable (String) -> Void
     ) async -> ModifyPolicyOutcome {
         let removeStep = "\(step) (remove)"

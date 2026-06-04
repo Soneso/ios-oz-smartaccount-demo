@@ -24,11 +24,11 @@ public protocol ContextRuleManagerFullType: ContextRuleManagerType {
     ///   - ruleId: The numeric rule identifier to remove.
     ///   - selectedSigners: Signer list for multi-signer authorization, or empty
     ///     for single-passkey authorization.
-    /// - Returns: A `TransactionResult` describing the on-chain outcome.
+    /// - Returns: An `OZTransactionResult` describing the on-chain outcome.
     func removeContextRule(
         ruleId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Returns the current number of context rules registered on the smart account.
     func getContextRulesCount() async throws -> UInt32
@@ -45,15 +45,15 @@ public protocol ContextRuleManagerFullType: ContextRuleManagerType {
     ///   - policies: Map of policy contract addresses to install parameters.
     ///   - selectedSigners: Signer list for multi-signer authorization, or empty
     ///     for single-passkey authorization.
-    /// - Returns: A `TransactionResult` describing the on-chain outcome.
+    /// - Returns: An `OZTransactionResult` describing the on-chain outcome.
     func addContextRule(
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         name: String,
         validUntil: UInt32?,
         signers: [any OZSmartAccountSigner],
         policies: [String: SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     // swiftlint:enable function_parameter_count
 
@@ -65,60 +65,60 @@ public protocol ContextRuleManagerFullType: ContextRuleManagerType {
     func updateContextRuleName(
         ruleId: UInt32,
         newName: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Updates the rule's expiration ledger (`nil` removes expiry).
     func updateContextRuleValidUntil(
         ruleId: UInt32,
         newValidUntil: UInt32?,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Adds a delegated (G-address) signer to the rule.
     func addDelegatedSignerToRule(
         ruleId: UInt32,
         address: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Adds a raw Ed25519 signer to the rule using the configured verifier.
     func addEd25519SignerToRule(
         ruleId: UInt32,
         verifierAddress: String,
         publicKey: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Adds a WebAuthn passkey signer to the rule.
     func addPasskeySignerToRule(
         ruleId: UInt32,
         publicKey: Data,
         credentialId: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Removes a signer from the rule by on-chain identifier.
     func removeSignerFromRule(
         ruleId: UInt32,
         signerId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Adds a policy with encoded install params to the rule.
     func addPolicyToRule(
         ruleId: UInt32,
         policyAddress: String,
         installParams: SCValXDR,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Removes a policy from the rule by on-chain identifier.
     func removePolicyFromRule(
         ruleId: UInt32,
         policyId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
 
     /// Returns the rule's raw on-chain `SCValXDR` form, used by the edit-flow
     /// to feed `set_threshold`.
@@ -180,7 +180,7 @@ public final class ContextRuleFlow {
     ///   - demoState: Shared observable demo state.
     ///   - activityLog: Shared activity log.
     ///   - contextRuleManager: Adapter over `OZContextRuleManager`. `nil` causes
-    ///     all operations to produce empty results or throw `WalletException.NotConnected`.
+    ///     all operations to produce empty results or throw `SmartAccountWalletException.NotConnected`.
     ///   - smartAccountExecutor: Adapter over the smart account's `execute` entry
     ///     point, used by the edit-flow for policy operations such as
     ///     `set_threshold`. `nil` causes threshold-only modifications to throw.
@@ -226,11 +226,11 @@ public final class ContextRuleFlow {
     /// Logs the fetch attempt and outcome. On success, logs the count. On failure,
     /// the error is propagated so the screen can display an error card.
     ///
-    /// - Returns: Array of `ParsedContextRule`, sorted by ID ascending.
+    /// - Returns: Array of `OZParsedContextRule`, sorted by ID ascending.
     /// - Throws: SDK errors if the RPC call fails.
-    public func listContextRules() async throws -> [ParsedContextRule] {
+    public func listContextRules() async throws -> [OZParsedContextRule] {
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         activityLog.info("Loading context rules...")
         let rules = try await manager.listContextRules()
@@ -296,7 +296,7 @@ public final class ContextRuleFlow {
             throw ContextRuleFlowError.cannotRemoveLastRule
         }
         guard demoState.isConnected, let manager = contextRuleManager else {
-            throw WalletException.NotConnected(message: "No wallet connected.")
+            throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         }
         isRemoving = true
         defer { isRemoving = false }
@@ -321,17 +321,17 @@ public final class ContextRuleFlow {
         return hash
     }
 
-    /// Converts user-selected signers to ``SelectedSigner`` and wraps the
+    /// Converts user-selected signers to ``OZSelectedSigner`` and wraps the
     /// shared "unsupported signer kind" error into
     /// ``ContextRuleFlowError/unsupportedSignerKind(description:)`` so the
     /// flow's typed error surface stays stable for tests and callers.
     private func resolveSelectedSignersForRemoval(
         _ selectedSigners: [any OZSmartAccountSigner]
-    ) async throws -> [SelectedSigner] {
+    ) async throws -> [OZSelectedSigner] {
         try await buildSelectedSigners(selectedSigners)
     }
 
-    /// Flow seam that converts user-selected signers to ``SelectedSigner``,
+    /// Flow seam that converts user-selected signers to ``OZSelectedSigner``,
     /// looking up each passkey's stored WebAuthn transport hints through the
     /// connected kit's credential manager.
     ///
@@ -342,12 +342,12 @@ public final class ContextRuleFlow {
     /// flow's typed error surface stays stable for tests and callers.
     ///
     /// - Parameter selectedSigners: User-selected signers in picker order.
-    /// - Returns: ``SelectedSigner`` list in the same order.
+    /// - Returns: ``OZSelectedSigner`` list in the same order.
     /// - Throws: ``ContextRuleFlowError/unsupportedSignerKind(description:)``
     ///   when a signer shape cannot be honoured.
     internal func buildSelectedSigners(
         _ selectedSigners: [any OZSmartAccountSigner]
-    ) async throws -> [SelectedSigner] {
+    ) async throws -> [OZSelectedSigner] {
         do {
             return try await MultiSignerRegistration.buildSelectedSigners(
                 selectedSigners,
@@ -376,10 +376,10 @@ public final class ContextRuleFlow {
     private func registerAndExecuteRemove(
         manager: any ContextRuleManagerFullType,
         ruleId: UInt32,
-        built: [SelectedSigner],
+        built: [OZSelectedSigner],
         delegatedSecrets: [String: String],
         ed25519Secrets: [Ed25519SecretKey: Data]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         do {
             return try await MultiSignerRegistration.registerInProcessSignersWithCleanup(
                 delegatedSecrets: delegatedSecrets,
@@ -448,7 +448,7 @@ public enum ContextRuleFlowError: Error, Sendable {
     /// The caller attempted to remove the only remaining context rule.
     case cannotRemoveLastRule
 
-    /// The SDK returned a non-success `TransactionResult` with the attached reason.
+    /// The SDK returned a non-success `OZTransactionResult` with the attached reason.
     case removeFailed(reason: String)
 
     /// The registered keypair for a delegated signer derived a different G-address.
@@ -474,7 +474,7 @@ public enum ContextRuleFlowError: Error, Sendable {
     case latestLedgerFetchFailed(reason: String)
 
     /// The user-entered context type could not be resolved into a valid
-    /// ``ContextRuleType`` (for example, a malformed WASM hash for the
+    /// ``OZContextRuleType`` (for example, a malformed WASM hash for the
     /// "create contract" option). Distinct from ``removeFailed`` so the call
     /// site can render an actionable per-field error.
     case invalidContextType(reason: String)

@@ -121,7 +121,7 @@ public protocol WalletOperationsType: Sendable {
         autoSubmit: Bool,
         autoFund: Bool,
         nativeTokenContract: String?
-    ) async throws -> CreateWalletResult
+    ) async throws -> OZCreateWalletResult
 }
 
 // ============================================================================
@@ -148,7 +148,7 @@ public struct WalletOperationsAdapter: WalletOperationsType, Sendable {
         autoSubmit: Bool,
         autoFund: Bool,
         nativeTokenContract: String?
-    ) async throws -> CreateWalletResult {
+    ) async throws -> OZCreateWalletResult {
         return try await inner.createWallet(
             userName: userName,
             autoSubmit: autoSubmit,
@@ -361,7 +361,7 @@ public final class WalletCreationFlow {
         userName: String,
         autoSubmit: Bool,
         autoFund: Bool
-    ) async throws -> CreateWalletResult {
+    ) async throws -> OZCreateWalletResult {
         let safeName = Self.safeUserNameForLog(userName)
         activityLog.info("Creating wallet for \"\(safeName)\"…")
         do {
@@ -403,13 +403,13 @@ public final class WalletCreationFlow {
     /// uncompressed format before the key is registered on-chain.
     ///
     /// Note: `clientDataJSON` fields (origin, type, crossOrigin) cannot be
-    /// re-verified here because `CreateWalletResult` does not surface
+    /// re-verified here because `OZCreateWalletResult` does not surface
     /// `clientDataJSON` or `attestationObject`. The structural ceiling for
     /// registration-time demo-layer rechecks is this key-format guard.
     ///
     /// - Throws: `WalletCreationError.webAuthnKeyFormatInvalid` if the key
     ///   does not pass the format check.
-    private func verifyCredentialPublicKey(_ sdkResult: CreateWalletResult) throws {
+    private func verifyCredentialPublicKey(_ sdkResult: OZCreateWalletResult) throws {
         do {
             try performCredentialPublicKeyCheck(publicKey: sdkResult.publicKey)
         } catch let verifyError as WalletCreationError {
@@ -422,7 +422,7 @@ public final class WalletCreationFlow {
     ///
     /// Also clears stale balances so the UI shows a pending state while the
     /// post-creation balance refresh runs asynchronously.
-    private func commitConnectionState(sdkResult: CreateWalletResult, autoSubmit: Bool) {
+    private func commitConnectionState(sdkResult: OZCreateWalletResult, autoSubmit: Bool) {
         let isDeployed = autoSubmit
         demoState.setConnected(
             contractId: sdkResult.contractId,
@@ -461,7 +461,7 @@ public final class WalletCreationFlow {
     /// main-screen Deploy Now path and the retry-pending-deploy path. Mint
     /// failure is non-fatal: the shared helper logs the curated error message
     /// and returns `nil`.
-    private func attemptMint(sdkResult: CreateWalletResult) async {
+    private func attemptMint(sdkResult: OZCreateWalletResult) async {
         let mainFlow = mainScreenFlow
         await provisionDemoTokens(
             service: demoTokenService,
