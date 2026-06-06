@@ -62,7 +62,6 @@ struct DemoEd25519AdapterCustodyTests {
         let manager = OZExternalSignerManager(
             networkPassphrase: DemoConfig.networkPassphrase,
             walletAdapter: nil,
-            walletConnectionStorage: nil,
             ed25519Adapter: adapter
         )
         let identity = try DemoExternalSignersTestSupport.ed25519Identity()

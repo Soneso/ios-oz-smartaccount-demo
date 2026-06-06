@@ -177,11 +177,6 @@ public final class ExternalSignerManagerAdapter: OZExternalWalletAdapter, @unche
         return OZConnectedWallet(address: address, walletId: "reown", walletName: meta.name)
     }
 
-    /// Reconnection is not supported; the wallet must re-pair via `connect()`.
-    public func reconnect(walletId: String) async throws -> OZConnectedWallet? {
-        return nil
-    }
-
     /// Signs an authorization preimage for the given address via the wallet connector.
     ///
     /// Forwards to `WalletConnector.signAuthEntry(authEntryXdr:contextRuleIds:)` when

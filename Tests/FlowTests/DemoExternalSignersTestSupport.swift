@@ -58,7 +58,6 @@ enum DemoExternalSignersTestSupport {
         let manager = OZExternalSignerManager(
             networkPassphrase: DemoConfig.networkPassphrase,
             walletAdapter: nil,
-            walletConnectionStorage: nil,
             ed25519Adapter: adapter
         )
         state.setInjectedExternalSigners(manager)
