@@ -210,8 +210,8 @@ public final class MainScreenFlow {
     ///
     /// DEMO token balance:
     /// Only fetched when `DemoState.demoTokenContractId` is non-nil. Same SAC
-    /// interface, same stroop denomination. The balance is stored alongside the
-    /// XLM balance in `DemoState`.
+    /// interface, returned in the token's base units. The balance is stored
+    /// alongside the XLM balance in `DemoState`.
     ///
     /// Errors:
     /// Balance fetch errors are caught, logged to the activity log at `.error`
@@ -227,7 +227,7 @@ public final class MainScreenFlow {
                 contractAddress: DemoConfig.nativeTokenContract,
                 accountAddress: contractId
             )
-            demoState.setXlmBalance(formatStroopsAsXlm(xlm))
+            demoState.setXlmBalance(formatBaseUnitsAsDecimal(xlm))
         } catch {
             let message = ActivityLogState.redact(actionableMessage(for: error))
             activityLog.error("Failed to refresh balance: \(message)")
@@ -239,7 +239,7 @@ public final class MainScreenFlow {
                     contractAddress: demoContractId,
                     accountAddress: contractId
                 )
-                demoState.setDemoTokenBalance(formatStroopsAsXlm(demo))
+                demoState.setDemoTokenBalance(formatSmallestUnitsAsDecimal(demo))
             } catch {
                 let message = ActivityLogState.redact(actionableMessage(for: error))
                 activityLog.error("Failed to refresh balance: \(message)")
@@ -493,7 +493,7 @@ public final class MainScreenFlow {
     // -------------------------------------------------------------------------
 
     /// Invokes `balance(id: <accountAddress>)` on a SAC token contract and returns
-    /// the result as an `Int128` stroop amount.
+    /// the result as an `Int128` base-units amount.
     ///
     /// Delegates to `SACBalanceFetcher.fetchBalance(contract:account:)` so
     /// the simulation envelope construction, i128 decoding, and source-account

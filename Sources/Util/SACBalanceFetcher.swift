@@ -11,12 +11,12 @@ import stellarsdk
 // ============================================================================
 
 /// Invokes `balance(id:)` on a Stellar Asset Contract (SAC) token contract
-/// and returns the result as an `Int128` stroop amount.
+/// and returns the result as an `Int128` base-units amount.
 ///
 /// SAC token contracts expose the SEP-41 token interface. The `balance` function
 /// accepts a `contract` address argument and returns the balance as an `i128`
-/// signed 128-bit integer in the token's smallest unit (stroops for native XLM,
-/// indivisible units for DEMO test tokens). The native Swift `Int128` type
+/// signed 128-bit integer in the token's smallest unit (base units; for native
+/// XLM the base unit is the stroop). The native Swift `Int128` type
 /// holds the full signed 128-bit range losslessly, so no overflow sentinel or
 /// narrowing conversion is needed.
 ///
@@ -53,9 +53,9 @@ public enum SACBalanceFetcher {
     /// - Parameters:
     ///   - contract: SAC token contract address (C-strkey).
     ///   - account: Smart account contract address (C-strkey) whose balance to read.
-    /// - Returns: Balance as `Int128` stroops, preserving the full signed 128-bit
+    /// - Returns: Balance as `Int128` base units, preserving the full signed 128-bit
     ///   on-chain range without truncation or sentinel substitution. Pair with
-    ///   ``formatStroopsAsXlm(_:)-(Int128)`` to render the value as a display string.
+    ///   ``formatBaseUnitsAsDecimal(_:)-(Int128)`` to render the value as a display string.
     /// - Throws:
     ///   - `BalanceFetchError.simulationFailed` when the RPC returns an error response.
     ///   - `BalanceFetchError.unexpectedReturnType` when the result cannot be decoded
@@ -141,7 +141,7 @@ public enum SACBalanceFetcher {
     // MARK: - Private: i128 decoding
     // -------------------------------------------------------------------------
 
-    /// Extracts an `Int128` stroop amount from the first result of a SAC
+    /// Extracts an `Int128` base-units amount from the first result of a SAC
     /// `balance` simulation response.
     ///
     /// A missing or void first result is treated as zero balance (some

@@ -7,23 +7,27 @@ import Foundation
 import stellarsdk
 
 // ============================================================================
-// MARK: - Stellar Amount Conversion
+// MARK: - Token Amount Conversion
 // ============================================================================
 
-/// Converts a decimal XLM amount string (e.g. "100.5") to stroops (Int64).
+/// Converts a decimal token amount string (e.g. "100.5") to base units (Int64).
+///
+/// Base units are the token's smallest indivisible unit (10^-decimals of one
+/// token). This demo uses the Stellar 7-decimal convention shared by SEP-41
+/// tokens, so one whole token equals 10^7 base units.
 ///
 /// Uses `NSDecimalNumberHandler` rounding (bankers' rounding, scale 0) to avoid
 /// floating-point representation artefacts at high decimal counts. The caller's
-/// explicit bounds check (`stroopsDecimal <= maxAllowed`) gates the `Int64`
+/// explicit bounds check (`baseUnitsDecimal <= maxAllowed`) gates the `Int64`
 /// conversion; `raiseOnOverflow: false` keeps the path NSException-free so the
 /// returned `nil` is the single failure signal callers must handle.
 ///
 /// - Parameter value: Decimal amount string (whole or fractional). Returns `nil`
 ///   for negative inputs, unparseable strings, or values that would exceed
-///   `Int64.max` stroops.
-/// - Returns: Stroops amount as `Int64`, or `nil` if the input cannot be
-///   represented as a non-negative `Int64` stroop value.
-public func stroopsFromDecimalAmount(_ value: String) -> Int64? {
+///   `Int64.max` base units.
+/// - Returns: Base-units amount as `Int64`, or `nil` if the input cannot be
+///   represented as a non-negative `Int64` base-units value.
+public func baseUnitsFromDecimalAmount(_ value: String) -> Int64? {
     // Normalise the decimal separator to a dot so comma-decimal-separator
     // locales (e.g. de_DE) are handled identically to en_US_POSIX. The amount
     // field in the UI already validates via `validateAmount` with the same
@@ -32,10 +36,10 @@ public func stroopsFromDecimalAmount(_ value: String) -> Int64? {
     let normalised = value.replacingOccurrences(of: ",", with: ".")
     guard let decimal = Decimal(string: normalised), decimal >= 0 else { return nil }
     let multiplier = Decimal(StellarProtocolConstants.stroopsPerXlm)
-    let stroopsDecimal = decimal * multiplier
+    let baseUnitsDecimal = decimal * multiplier
     let maxAllowed = Decimal(Int64.max)
-    guard stroopsDecimal <= maxAllowed else { return nil }
-    let number = NSDecimalNumber(decimal: stroopsDecimal)
+    guard baseUnitsDecimal <= maxAllowed else { return nil }
+    let number = NSDecimalNumber(decimal: baseUnitsDecimal)
     let handler = NSDecimalNumberHandler(
         roundingMode: .bankers,
         scale: 0,
@@ -52,7 +56,11 @@ public func stroopsFromDecimalAmount(_ value: String) -> Int64? {
 // MARK: - Balance Formatting
 // ============================================================================
 
-/// Converts a stroops amount to a display string with up to 7 decimal places.
+/// Converts a base-units amount to a display string with up to 7 decimal places.
+///
+/// Base units are the token's smallest indivisible unit. This formatter applies
+/// the Stellar 7-decimal convention shared by SEP-41 tokens (including native
+/// XLM, whose base unit is the stroop: 1 XLM = 10^7 stroops).
 ///
 /// Uses integer arithmetic throughout to avoid floating-point formatting
 /// artefacts. Trailing fractional zeros are stripped (e.g. 10_000_000 →
@@ -62,49 +70,49 @@ public func stroopsFromDecimalAmount(_ value: String) -> Int64? {
 /// Special case: `Int64.min` cannot be negated in two's complement;
 /// it is returned as the literal string "-922337203685.4775808".
 ///
-/// - Parameter stroops: Amount in the token's smallest unit (1 XLM = 10^7 stroops).
+/// - Parameter baseUnits: Amount in the token's smallest unit (1 whole token =
+///   10^7 base units, matching the Stellar 7-decimal convention).
 /// - Returns: Formatted string such as "100.0", "0.5", or "10.1234567".
-public func formatStroopsAsXlm(_ stroops: Int64) -> String {
-    if stroops == Int64.min {
+public func formatBaseUnitsAsDecimal(_ baseUnits: Int64) -> String {
+    if baseUnits == Int64.min {
         // Int64.min cannot be negated; return the literal decimal representation.
         return "-922337203685.4775808"
     }
-    let negative = stroops < 0
-    let absStroops = negative ? -stroops : stroops
-    let wholePart = absStroops / 10_000_000
-    let fractionalPart = absStroops % 10_000_000
+    let negative = baseUnits < 0
+    let absBaseUnits = negative ? -baseUnits : baseUnits
+    let wholePart = absBaseUnits / 10_000_000
+    let fractionalPart = absBaseUnits % 10_000_000
     let fractionalStr = String(fractionalPart)
         .padLeft(toLength: 7, with: "0")
         .trimTrailingZeros(keepAtLeast: 1)
     return "\(negative ? "-" : "")\(wholePart).\(fractionalStr)"
 }
 
-/// Parses a stroops string (as returned by Soroban RPC) and formats it for display.
+/// Parses a base-units string (as returned by Soroban RPC) and formats it for display.
 ///
 /// Returns "0.0" if the string cannot be parsed as an Int64.
 ///
-/// - Parameter stroopsStr: Numeric string in the token's smallest unit.
-public func formatStroopsAsXlm(_ stroopsStr: String) -> String {
-    guard let stroops = Int64(stroopsStr) else { return "0.0" }
-    return formatStroopsAsXlm(stroops)
+/// - Parameter baseUnitsStr: Numeric string in the token's smallest unit.
+public func formatBaseUnitsAsDecimal(_ baseUnitsStr: String) -> String {
+    guard let baseUnits = Int64(baseUnitsStr) else { return "0.0" }
+    return formatBaseUnitsAsDecimal(baseUnits)
 }
 
-/// Token-agnostic alias for ``formatStroopsAsXlm(_:)`` for use at call sites
-/// that format SEP-41 token amounts other than XLM (e.g. DEMO allowances).
+/// Token-agnostic alias for ``formatBaseUnitsAsDecimal(_:)`` retained for call
+/// sites that prefer the "smallest units" phrasing (e.g. DEMO allowances).
 ///
-/// The underlying formatter is pure decimal scaling — it has no XLM-specific
-/// behaviour beyond the 7-decimal Stellar convention shared by all SEP-41
-/// tokens — so this alias preserves intent at the call site without adding a
-/// distinct implementation.
+/// The underlying formatter is pure decimal scaling using the 7-decimal Stellar
+/// convention shared by all SEP-41 tokens, so this alias preserves intent at the
+/// call site without adding a distinct implementation.
 ///
 /// - Parameter smallestUnits: Amount in the token's smallest unit (1 token
 ///   unit = 10^7 smallest units, matching the Stellar 7-decimal convention).
 /// - Returns: Formatted string such as "100.0", "0.5", or "10.1234567".
 public func formatSmallestUnitsAsDecimal(_ smallestUnits: Int64) -> String {
-    return formatStroopsAsXlm(smallestUnits)
+    return formatBaseUnitsAsDecimal(smallestUnits)
 }
 
-/// `Int128` overload of ``formatStroopsAsXlm(_:)-(Int64)``.
+/// `Int128` overload of ``formatBaseUnitsAsDecimal(_:)-(Int64)``.
 ///
 /// Used on the read paths that decode an `i128` on-chain balance and must
 /// preserve the full 128-bit signed range without truncating to `Int64`.
@@ -117,10 +125,10 @@ public func formatSmallestUnitsAsDecimal(_ smallestUnits: Int64) -> String {
 /// `Int128.min` special case: `String(Int128.min)` already produces the exact
 /// decimal expansion `"-170141183460469231731687303715884105728"`.
 ///
-/// - Parameter stroops: Amount in the token's smallest unit, as `Int128`.
+/// - Parameter baseUnits: Amount in the token's smallest unit, as `Int128`.
 /// - Returns: Formatted string such as "100.0", "0.5", or "10.1234567".
-public func formatStroopsAsXlm(_ stroops: Int128) -> String {
-    let raw = String(stroops)
+public func formatBaseUnitsAsDecimal(_ baseUnits: Int128) -> String {
+    let raw = String(baseUnits)
     let isNegative = raw.hasPrefix("-")
     var magnitude = isNegative ? String(raw.dropFirst()) : raw
 
@@ -145,14 +153,14 @@ public func formatStroopsAsXlm(_ stroops: Int128) -> String {
 
 /// `Int128` overload of ``formatSmallestUnitsAsDecimal(_:)-(Int64)``.
 ///
-/// Same role as the `Int64` overload — preserves intent at SEP-41 call sites
-/// that are not formatting XLM. Forwards to ``formatStroopsAsXlm(_:)-(Int128)``
-/// so the 7-decimal Stellar convention is applied in exactly one place.
+/// Same role as the `Int64` overload — preserves intent at SEP-41 call sites.
+/// Forwards to ``formatBaseUnitsAsDecimal(_:)-(Int128)`` so the 7-decimal
+/// Stellar convention is applied in exactly one place.
 ///
 /// - Parameter smallestUnits: Amount in the token's smallest unit, as `Int128`.
 /// - Returns: Formatted string such as "100.0", "0.5", or "10.1234567".
 public func formatSmallestUnitsAsDecimal(_ smallestUnits: Int128) -> String {
-    return formatStroopsAsXlm(smallestUnits)
+    return formatBaseUnitsAsDecimal(smallestUnits)
 }
 
 // ============================================================================

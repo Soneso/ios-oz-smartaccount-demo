@@ -63,15 +63,15 @@ public enum PolicyScValBuilders {
     /// }
     /// ```
     ///
-    /// The spending limit contract enforces that no more than `limit` stroops may be
+    /// The spending limit contract enforces that no more than `limit` base units may be
     /// transferred within a rolling window of `periodLedgers` ledgers. The token contract
     /// address is stored in the context rule, not in `installParams` — this builder does
     /// not accept a token parameter because it does not belong in the encoded map.
-    /// The `limit` is expressed as an `Int64` stroops value (positive) which fits safely
+    /// The `limit` is expressed as an `Int64` base-units value (positive) which fits safely
     /// into the I128 low word.
     ///
     /// - Parameters:
-    ///   - limit: Maximum stroops allowed per period (positive, fits in Int64).
+    ///   - limit: Maximum base units allowed per period (positive, fits in Int64).
     ///   - periodLedgers: Rolling reset period expressed as a ledger count. Must be > 0.
     /// - Returns: An `SCValXDR.map` suitable for passing as `installParams`.
     public static func buildSpendingLimitScVal(

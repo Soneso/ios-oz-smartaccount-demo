@@ -82,18 +82,18 @@ extension ContextRuleFlow {
     /// Decodes a spending-limit struct map.
     internal func parseSpendingLimitParams(_ scVal: SCValXDR) -> PolicyParams? {
         guard case .map(let entries) = scVal, let entries else { return nil }
-        var stroops: Int64?
+        var baseUnits: Int64?
         var periodLedgers: UInt32?
         for entry in entries {
-            applySpendingLimitField(entry: entry, stroops: &stroops, periodLedgers: &periodLedgers)
+            applySpendingLimitField(entry: entry, baseUnits: &baseUnits, periodLedgers: &periodLedgers)
         }
-        guard let stroops, let periodLedgers else { return nil }
-        let xlmString = formatStroopsAsXlm(stroops)
+        guard let baseUnits, let periodLedgers else { return nil }
+        let amountString = formatBaseUnitsAsDecimal(baseUnits)
         let days = max(1, Int(periodLedgers) / StellarProtocolConstants.ledgersPerDay)
         return PolicyParams(
             type: "spending_limit",
             threshold: nil,
-            spendingLimit: xlmString,
+            spendingLimit: amountString,
             periodDays: days,
             signerWeights: nil
         )
@@ -101,7 +101,7 @@ extension ContextRuleFlow {
 
     private func applySpendingLimitField(
         entry: SCMapEntryXDR,
-        stroops: inout Int64?,
+        baseUnits: inout Int64?,
         periodLedgers: inout UInt32?
     ) {
         guard case .symbol(let key) = entry.key else { return }
@@ -115,7 +115,7 @@ extension ContextRuleFlow {
                 // user must remove and re-add the policy to replace it.
                 let maxLo = UInt64(Int64.max)
                 if parts.hi == 0 && parts.lo <= maxLo {
-                    stroops = Int64(parts.lo)
+                    baseUnits = Int64(parts.lo)
                 }
             }
         case "period_ledgers":

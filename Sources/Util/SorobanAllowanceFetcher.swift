@@ -33,9 +33,9 @@ public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
         smartAccountContractId: String,
         spenderAddress: String
     ) async -> String? {
-        let stroops: Int128
+        let baseUnits: Int128
         do {
-            stroops = try await simulate(
+            baseUnits = try await simulate(
                 tokenContract: tokenContract,
                 smartAccountContractId: smartAccountContractId,
                 spenderAddress: spenderAddress
@@ -43,7 +43,7 @@ public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
         } catch {
             return nil
         }
-        return formatSmallestUnitsAsDecimal(stroops)
+        return formatSmallestUnitsAsDecimal(baseUnits)
     }
 
     // -------------------------------------------------------------------------

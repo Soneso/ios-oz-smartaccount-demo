@@ -97,7 +97,7 @@ extension EditPolicyParamsForm {
             fieldErrors["amount"] = "Amount must contain at most one decimal point"
             return
         }
-        guard let stroops = stroopsFromDecimalAmount(amount), stroops > 0 else {
+        guard let baseUnits = baseUnitsFromDecimalAmount(amount), baseUnits > 0 else {
             fieldErrors["amount"] = "Amount must be a positive number"
             return
         }
@@ -112,7 +112,7 @@ extension EditPolicyParamsForm {
         let changed = amountChanged || periodChanged
         let periodLedgers = UInt32(days * StellarProtocol.ledgersPerDay)
         let scVal = PolicyScValBuilders.buildSpendingLimitScVal(
-            limit: stroops,
+            limit: baseUnits,
             periodLedgers: periodLedgers
         )
         let updated = entry.with(

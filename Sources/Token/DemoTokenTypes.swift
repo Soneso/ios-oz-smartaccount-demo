@@ -59,7 +59,7 @@ public struct DemoTokenResult: Sendable {
     /// The DEMO token contract address (C-address).
     public let tokenContractId: String
 
-    /// Number of stroops minted in this call.
+    /// Number of base units minted in this call.
     public let amountMinted: Int64
 
     /// True if the contract was already deployed before this call; false if newly deployed.

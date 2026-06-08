@@ -100,13 +100,13 @@ extension PolicyManagementSection {
             fieldErrors["spendingPeriod"] = "Must be at least 1 day"
             return
         }
-        guard let stroops = stroopsFromDecimalAmount(amountStr), stroops > 0 else {
+        guard let baseUnits = baseUnitsFromDecimalAmount(amountStr), baseUnits > 0 else {
             fieldErrors["spendingAmount"] = "Must be a positive number"
             return
         }
         let periodLedgers = UInt32(days * StellarProtocol.ledgersPerDay)
         let scVal = PolicyScValBuilders.buildSpendingLimitScVal(
-            limit: stroops,
+            limit: baseUnits,
             periodLedgers: periodLedgers
         )
         let label = "Limit: \(amountStr) / \(pluralize(days, "day", "days"))"
