@@ -9,11 +9,11 @@ import SwiftUI
 // MARK: - SignerWeightPair
 // ============================================================================
 
-/// Encoded weight entry built by the weighted-threshold form.
+/// Validated weight entry built by the weighted-threshold form.
 internal struct SignerWeightPair {
 
-    /// Signer encoded as `ScVal` — input to `PolicyScValBuilders`.
-    let signerScVal: ScVal
+    /// The signer that contributes `weight` votes.
+    let signer: any SmartAccountSignerProtocol
 
     /// Per-signer weight in the weighted-threshold map.
     let weight: UInt32
@@ -22,7 +22,7 @@ internal struct SignerWeightPair {
     let signerKey: String
 }
 
-/// Outcome of validating and encoding the per-signer weight rows.
+/// Outcome of validating the per-signer weight rows.
 internal enum SignerWeightCollection {
     case success([SignerWeightPair])
     case failure(String)
@@ -169,13 +169,7 @@ extension PolicyManagementSection {
                   let weight = UInt32(raw), weight >= 1 else {
                 return .failure("All signers must have a weight >= 1")
             }
-            let scVal: ScVal
-            do {
-                scVal = try signer.toScVal()
-            } catch {
-                return .failure(ActivityLogState.redact(actionableMessage(for: error)))
-            }
-            pairs.append(SignerWeightPair(signerScVal: scVal, weight: weight, signerKey: key))
+            pairs.append(SignerWeightPair(signer: signer, weight: weight, signerKey: key))
         }
         return .success(pairs)
     }
@@ -192,15 +186,10 @@ extension PolicyManagementSection {
                 "Total weight (\(total)) must be >= threshold (\(threshold))"
             return
         }
-        let weights: [(signer: ScVal, weight: UInt32)] = pairs.map {
-            (signer: $0.signerScVal, weight: $0.weight)
-        }
-        let scVal = PolicyScValBuilders.buildWeightedThresholdScVal(
-            weights: weights,
-            threshold: threshold
-        )
+        let entries = pairs.map { PolicyWeightedEntry(signer: $0.signer, weight: $0.weight) }
+        let spec = PolicyInstallSpec.weightedThreshold(entries: entries, threshold: threshold)
         let label = "Weighted: threshold=\(threshold)"
-        registerWeightedThresholdPolicy(info: info, label: label, scVal: scVal)
+        registerWeightedThresholdPolicy(info: info, label: label, spec: spec)
         weightedThresholdValue = ""
         signerWeights = [:]
         selectedPolicyType = nil
@@ -212,14 +201,14 @@ extension PolicyManagementSection {
     private func registerWeightedThresholdPolicy(
         info: PolicyInfo,
         label: String,
-        scVal: ScVal
+        spec: PolicyInstallSpec
     ) {
         if isEditing {
             let entry = EditPolicyEntry(
                 info: info,
                 label: label,
                 address: info.address,
-                scVal: scVal,
+                installSpec: spec,
                 onChainId: nil,
                 isOriginal: false
             )
@@ -230,7 +219,7 @@ extension PolicyManagementSection {
                     info: info,
                     label: label,
                     address: info.address,
-                    scVal: scVal
+                    installSpec: spec
                 )
             )
         }

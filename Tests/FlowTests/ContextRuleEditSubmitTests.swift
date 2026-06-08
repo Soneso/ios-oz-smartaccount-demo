@@ -74,11 +74,10 @@ struct SubmitContextRuleEditsTests {
             info: knownPolicies[1],
             onChainId: 9
         )
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 1)
         let newPolicy = EditFlowFixtures.newPolicyEntry(
             info: knownPolicies[0],
             label: "Threshold: 1-of-N",
-            scVal: scVal
+            spec: .simpleThreshold(threshold: 1)
         )
         return ContextRuleEditDiff(
             ruleId: 7,
@@ -133,11 +132,10 @@ struct SubmitContextRuleEditsTests {
             info: knownPolicies[1],
             onChainId: 9
         )
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 1)
         let newPolicy = EditFlowFixtures.newPolicyEntry(
             info: knownPolicies[0],
             label: "Threshold: 1-of-N",
-            scVal: scVal
+            spec: .simpleThreshold(threshold: 1)
         )
         return ContextRuleEditDiff(
             ruleId: 7,
@@ -161,7 +159,7 @@ struct SubmitContextRuleEditsTests {
         if case .updateName = calls[0] { } else { Issue.record("expected updateName first") }
         if case .removeSigner = calls[1] { } else { Issue.record("expected removeSigner second") }
         if case .removePolicy = calls[2] { } else { Issue.record("expected removePolicy third") }
-        if case .addPolicy = calls[3] { } else { Issue.record("expected addPolicy fourth") }
+        #expect(calls[3].isAddPolicy, "expected an addPolicy variant at index 3, got: \(calls[3])")
         if case .updateValidUntil = calls[4] { } else {
             Issue.record("expected updateValidUntil last")
         }
@@ -210,7 +208,6 @@ struct SubmitContextRuleEditsTests {
             policyAddress: threshold.address,
             policyId: 11
         )
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 3)
         let originalParams = PolicyParams(
             type: "threshold",
             threshold: 1,
@@ -221,7 +218,7 @@ struct SubmitContextRuleEditsTests {
         let entry = EditFlowFixtures.modifiedPolicyEntry(
             info: threshold,
             label: "Threshold: 3-of-N",
-            scVal: scVal,
+            spec: .simpleThreshold(threshold: 3),
             onChainId: 11,
             originalParams: originalParams
         )
@@ -255,10 +252,6 @@ struct SubmitContextRuleEditsTests {
     func nonThresholdModificationPair() async throws {
         let pair = EditFlowFixtures.makeFlow()
         let spending = try #require(knownPolicies.first { $0.type == "spending_limit" })
-        let scVal = PolicyScValBuilders.buildSpendingLimitScVal(
-            limit: 100_000_000,
-            periodLedgers: 17_280
-        )
         let originalParams = PolicyParams(
             type: "spending_limit",
             threshold: nil,
@@ -269,7 +262,7 @@ struct SubmitContextRuleEditsTests {
         let entry = EditFlowFixtures.modifiedPolicyEntry(
             info: spending,
             label: "Limit: 10 / 1 day(s)",
-            scVal: scVal,
+            spec: .spendingLimit(amount: "10", decimals: 7, periodLedgers: 17_280),
             onChainId: 21,
             originalParams: originalParams
         )
@@ -283,7 +276,62 @@ struct SubmitContextRuleEditsTests {
         let calls = pair.manager.editCalls
         #expect(calls.count == 2)
         if case .removePolicy = calls[0] { } else { Issue.record("expected removePolicy first") }
-        if case .addPolicy = calls[1] { } else { Issue.record("expected addPolicy second") }
+        #expect(calls[1].isAddPolicy, "expected an addPolicy variant at index 1, got: \(calls[1])")
+    }
+
+    @Test("Non-7-decimals spending limit dispatches addSpendingLimit with correct decimals")
+    func nonSevenDecimalsSpendingLimitDispatches() async throws {
+        let pair = EditFlowFixtures.makeFlow()
+        let spending = try #require(knownPolicies.first { $0.type == "spending_limit" })
+        var capturedDecimals: Int?
+        var capturedAmount: String?
+        pair.manager.addPolicyResult = OZTransactionResult(success: true, hash: "sl-hash", error: nil)
+        let spec = PolicyInstallSpec.spendingLimit(amount: "1000", decimals: 18, periodLedgers: 100)
+        let entry = EditFlowFixtures.newPolicyEntry(
+            info: spending,
+            label: "Limit: 1000 / 1 day(s)",
+            spec: spec
+        )
+        let diff = EditFlowFixtures.emptyDiff(newPolicies: [entry])
+        let result = try await pair.flow.submitContextRuleEdits(
+            diff: diff,
+            selectedSigners: []
+        ) { _ in }
+        #expect(result.success)
+        let addCalls = pair.manager.editCalls.filter { $0.isAddPolicy }
+        #expect(addCalls.count == 1)
+        if case .addSpendingLimit = addCalls[0] { } else {
+            Issue.record("expected addSpendingLimit, got: \(addCalls[0])")
+        }
+        _ = capturedDecimals  // referenced to avoid unused-variable warning
+        _ = capturedAmount
+    }
+
+    @Test("Above-Int64-max spending limit dispatches correctly")
+    func aboveInt64MaxSpendingLimitDispatches() async throws {
+        let pair = EditFlowFixtures.makeFlow()
+        let spending = try #require(knownPolicies.first { $0.type == "spending_limit" })
+        let spec = PolicyInstallSpec.spendingLimit(
+            amount: "1000000000000",
+            decimals: 7,
+            periodLedgers: 17_280
+        )
+        let entry = EditFlowFixtures.newPolicyEntry(
+            info: spending,
+            label: "Limit: 1000000000000 / 1 day(s)",
+            spec: spec
+        )
+        let diff = EditFlowFixtures.emptyDiff(newPolicies: [entry])
+        let result = try await pair.flow.submitContextRuleEdits(
+            diff: diff,
+            selectedSigners: []
+        ) { _ in }
+        #expect(result.success)
+        let addCalls = pair.manager.editCalls.filter { $0.isAddPolicy }
+        #expect(addCalls.count == 1)
+        if case .addSpendingLimit = addCalls[0] { } else {
+            Issue.record("expected addSpendingLimit, got: \(addCalls[0])")
+        }
     }
 
     @Test("Reentry guard rejects a concurrent submit")

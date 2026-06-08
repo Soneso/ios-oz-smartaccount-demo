@@ -26,17 +26,20 @@ final class MockTransactionOperations: TransactionOperationsType, @unchecked Sen
     private(set) var lastTokenContract: String?
     private(set) var lastRecipient: String?
     private(set) var lastAmount: String?
+    private(set) var lastDecimals: Int??
 
     func transfer(
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         forceMethod: OZSubmissionMethod?
     ) async throws -> OZTransactionResult {
         callCount += 1
         lastTokenContract = tokenContract
         lastRecipient = recipient
         lastAmount = amount
+        lastDecimals = decimals
         if let error { throw error }
         guard let result else {
             preconditionFailure("MockTransactionOperations: neither result nor error configured")
@@ -63,6 +66,7 @@ final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable 
     private(set) var lastTokenContract: String?
     private(set) var lastRecipient: String?
     private(set) var lastAmount: String?
+    private(set) var lastDecimals: Int??
     private(set) var lastSelectedSigners: [OZSelectedSigner] = []
 
     // swiftlint:disable:next function_parameter_count
@@ -70,6 +74,7 @@ final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable 
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         selectedSigners: [OZSelectedSigner],
         forceMethod: OZSubmissionMethod?,
         resolveContextRuleIds: OZResolveContextRuleIds?
@@ -78,6 +83,7 @@ final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable 
         lastTokenContract = tokenContract
         lastRecipient = recipient
         lastAmount = amount
+        lastDecimals = decimals
         lastSelectedSigners = selectedSigners
         await onCall?()
         if let error { throw error }

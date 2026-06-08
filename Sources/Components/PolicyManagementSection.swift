@@ -9,8 +9,7 @@ import SwiftUI
 // MARK: - StagedPolicy
 // ============================================================================
 
-/// A policy staged on the builder form, pre-encoded as `ScVal` at the moment
-/// the user added it.
+/// A policy staged on the builder form, described by its typed install parameters.
 public struct StagedPolicy: Identifiable, Sendable {
 
     /// Stable id derived from the policy address. Each policy address is
@@ -27,14 +26,17 @@ public struct StagedPolicy: Identifiable, Sendable {
     /// Policy contract address (`C…`).
     public let address: String
 
-    /// Install parameters encoded as `ScVal`.
-    public let scVal: ScVal
+    /// Typed install parameters, or `nil` for on-chain policies loaded into edit
+    /// mode whose parameters have not been changed. The flow layer skips entries
+    /// with a `nil` spec (params already on-chain); entries with a non-nil spec
+    /// are encoded via `OZPolicyInstallParams.toScVal()` immediately before submit.
+    public let installSpec: PolicyInstallSpec?
 
-    public init(info: PolicyInfo, label: String, address: String, scVal: ScVal) {
+    public init(info: PolicyInfo, label: String, address: String, installSpec: PolicyInstallSpec?) {
         self.info = info
         self.label = label
         self.address = address
-        self.scVal = scVal
+        self.installSpec = installSpec
     }
 }
 
@@ -61,6 +63,15 @@ public struct PolicyManagementSection: View {
 
     internal let signers: [any SmartAccountSignerProtocol]
     internal let isSubmitting: Bool
+
+    /// Decimal scale for the rule's guarded token, used to convert spending-limit
+    /// amounts to base units. Resolved by the parent (``ContextRuleBuilderCore``).
+    internal let spendingLimitDecimals: Int
+
+    /// Non-nil when the guarded token's decimals could not be read. While set the
+    /// spending-limit "Add" button is disabled and the error is shown.
+    internal let spendingLimitDecimalsError: String?
+
     internal let isEditing: Bool
     internal let policyEntries: [EditPolicyEntry]
     internal let onAddEntry: ((EditPolicyEntry) -> Void)?
@@ -79,6 +90,8 @@ public struct PolicyManagementSection: View {
         fieldErrors: Binding<[String: String]>,
         signers: [any SmartAccountSignerProtocol],
         isSubmitting: Bool,
+        spendingLimitDecimals: Int = nativeTokenDecimals,
+        spendingLimitDecimalsError: String? = nil,
         isEditing: Bool = false,
         policyEntries: [EditPolicyEntry] = [],
         onAddEntry: ((EditPolicyEntry) -> Void)? = nil,
@@ -90,6 +103,8 @@ public struct PolicyManagementSection: View {
         self._fieldErrors = fieldErrors
         self.signers = signers
         self.isSubmitting = isSubmitting
+        self.spendingLimitDecimals = spendingLimitDecimals
+        self.spendingLimitDecimalsError = spendingLimitDecimalsError
         self.isEditing = isEditing
         self.policyEntries = policyEntries
         self.onAddEntry = onAddEntry
@@ -185,7 +200,8 @@ public struct PolicyManagementSection: View {
                     entry: entry,
                     signers: signers,
                     signerWeights: $signerWeights,
-                    isSubmitting: isSubmitting
+                    isSubmitting: isSubmitting,
+                    spendingLimitDecimals: spendingLimitDecimals
                 ) { updated in
                     onUpdateEntry?(index, updated)
                 }

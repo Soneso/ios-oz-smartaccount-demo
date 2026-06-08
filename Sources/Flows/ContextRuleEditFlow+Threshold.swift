@@ -107,8 +107,7 @@ extension ContextRuleFlow {
         entry: EditPolicyEntry,
         step: String
     ) async -> ThresholdPreflightOutcome {
-        guard let scVal = entry.scVal,
-              let newThreshold = decodeThresholdFromMap(scVal) else {
+        guard let newThreshold = thresholdFromSpec(entry.installSpec) else {
             return .rejected(thresholdPreflightFailure(
                 step: step,
                 error: "Threshold value not found in policy params"

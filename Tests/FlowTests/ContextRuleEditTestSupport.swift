@@ -104,7 +104,7 @@ enum EditFlowFixtures {
             info: info,
             label: "x",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: onChainId,
             isOriginal: true,
             modified: modified,
@@ -123,24 +123,23 @@ enum EditFlowFixtures {
             info: info,
             label: label,
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: onChainId,
             isOriginal: true
         )
     }
 
-    /// Builds a new (non-original) `EditPolicyEntry` for add scenarios. The
-    /// SCVal must be supplied so the add pipeline can install the policy.
+    /// Builds a new (non-original) `EditPolicyEntry` for add scenarios.
     static func newPolicyEntry(
         info: PolicyInfo,
         label: String,
-        scVal: SCValXDR
+        spec: PolicyInstallSpec
     ) -> EditPolicyEntry {
         return EditPolicyEntry(
             info: info,
             label: label,
             address: info.address,
-            scVal: scVal,
+            installSpec: spec,
             onChainId: nil,
             isOriginal: false
         )
@@ -161,12 +160,12 @@ enum EditFlowFixtures {
         return EditSignerEntry(signer: signer, onChainId: nil, isOriginal: false)
     }
 
-    /// Modified policy entry that carries an SCVal (for non-threshold modify
+    /// Modified policy entry that carries a typed spec (for non-threshold modify
     /// pipelines that need the install params to re-add).
     static func modifiedPolicyEntry(
         info: PolicyInfo,
         label: String,
-        scVal: SCValXDR,
+        spec: PolicyInstallSpec,
         onChainId: UInt32,
         originalParams: PolicyParams?
     ) -> EditPolicyEntry {
@@ -174,7 +173,7 @@ enum EditFlowFixtures {
             info: info,
             label: label,
             address: info.address,
-            scVal: scVal,
+            installSpec: spec,
             onChainId: onChainId,
             isOriginal: true,
             modified: true,

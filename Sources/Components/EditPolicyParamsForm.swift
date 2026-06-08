@@ -26,6 +26,11 @@ struct EditPolicyParamsForm: View {
     let signers: [any SmartAccountSignerProtocol]
     @Binding var signerWeights: [String: String]
     let isSubmitting: Bool
+
+    /// Decimal scale for the rule's guarded token, used to convert the edited
+    /// spending-limit amount to base units. Resolved by the parent.
+    var spendingLimitDecimals: Int = nativeTokenDecimals
+
     let onEntryUpdated: (EditPolicyEntry) -> Void
 
     @State internal var editThreshold: String = ""

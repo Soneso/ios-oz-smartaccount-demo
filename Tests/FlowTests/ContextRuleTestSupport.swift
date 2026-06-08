@@ -110,10 +110,23 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
         case addEd25519(ruleId: UInt32, verifier: String, pubKey: Data)
         case addPasskey(ruleId: UInt32, pubKey: Data, credentialId: Data)
         case removeSigner(ruleId: UInt32, signerId: UInt32)
-        case addPolicy(ruleId: UInt32, address: String)
+        case addSimpleThreshold(ruleId: UInt32, address: String, threshold: UInt32)
+        case addWeightedThreshold(ruleId: UInt32, address: String, threshold: UInt32)
+        case addSpendingLimit(ruleId: UInt32, address: String)
         case removePolicy(ruleId: UInt32, policyId: UInt32)
         case setThreshold(ruleId: UInt32, address: String, newThreshold: UInt32)
         case getContextRuleRaw(ruleId: UInt32)
+
+        /// Returns `true` for any addPolicy variant, so tests that only need to
+        /// verify "a policy was added" can use a single assertion.
+        var isAddPolicy: Bool {
+            switch self {
+            case .addSimpleThreshold, .addWeightedThreshold, .addSpendingLimit:
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     /// Per-method canned outcomes. Test sets one of these to control a step.
@@ -210,15 +223,40 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
         return removeSignerResult ?? Self.defaultEditSuccess("removeSigner")
     }
 
-    func addPolicyToRule(
+    func addSimpleThresholdToRule(
         ruleId: UInt32,
         policyAddress: String,
-        installParams: SCValXDR,
+        threshold: UInt32,
         selectedSigners: [OZSelectedSigner]
     ) async throws -> OZTransactionResult {
-        editCalls.append(.addPolicy(ruleId: ruleId, address: policyAddress))
+        editCalls.append(.addSimpleThreshold(ruleId: ruleId, address: policyAddress, threshold: threshold))
         if let error = addPolicyError { throw error }
-        return addPolicyResult ?? Self.defaultEditSuccess("addPolicy")
+        return addPolicyResult ?? Self.defaultEditSuccess("addSimpleThreshold")
+    }
+
+    func addWeightedThresholdToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        entries: [PolicyWeightedEntry],
+        threshold: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        editCalls.append(.addWeightedThreshold(ruleId: ruleId, address: policyAddress, threshold: threshold))
+        if let error = addPolicyError { throw error }
+        return addPolicyResult ?? Self.defaultEditSuccess("addWeightedThreshold")
+    }
+
+    func addSpendingLimitToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        amount: String,
+        decimals: Int,
+        periodLedgers: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        editCalls.append(.addSpendingLimit(ruleId: ruleId, address: policyAddress))
+        if let error = addPolicyError { throw error }
+        return addPolicyResult ?? Self.defaultEditSuccess("addSpendingLimit")
     }
 
     func removePolicyFromRule(
@@ -411,7 +449,8 @@ enum ContextRuleFixtures {
     static func makeFlow(
         manager: MockContextRuleManagerFull = MockContextRuleManagerFull(),
         state: DemoState? = nil,
-        log: ActivityLogState? = nil
+        log: ActivityLogState? = nil,
+        tokenDecimalsResolver: (any TokenDecimalsResolverType)? = nil
     ) -> MadeContextRuleFlow {
         let st = state ?? connectedState()
         let lg = log ?? ActivityLogState()
@@ -419,7 +458,8 @@ enum ContextRuleFixtures {
         let flow = ContextRuleFlow(
             demoState: st,
             activityLog: lg,
-            contextRuleManager: manager
+            contextRuleManager: manager,
+            tokenDecimalsResolver: tokenDecimalsResolver
         )
         return MadeContextRuleFlow(
             flow: flow,
@@ -447,6 +487,27 @@ struct MadeContextRuleFlow {
     let signers: OZExternalSignerManager
     /// Real Ed25519 adapter wired into the manager and `state`.
     let adapter: DemoEd25519Adapter
+}
+
+// ============================================================================
+// MARK: - MockTokenDecimalsResolver
+// ============================================================================
+
+/// Configurable mock for `TokenDecimalsResolverType`. Returns `result` or throws
+/// `error`, and records the token contract it was asked about.
+final class MockTokenDecimalsResolver: TokenDecimalsResolverType, @unchecked Sendable {
+
+    var result: Int = 7
+    var error: Error?
+    private(set) var callCount: Int = 0
+    private(set) var lastTokenContract: String?
+
+    func fetchTokenDecimals(tokenContract: String) async throws -> Int {
+        callCount += 1
+        lastTokenContract = tokenContract
+        if let error { throw error }
+        return result
+    }
 }
 
 // ============================================================================

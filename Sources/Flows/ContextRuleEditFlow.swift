@@ -86,11 +86,16 @@ public extension ContextRuleFlow {
     /// - Parameters:
     ///   - info: Known-policy metadata. The `type` field controls the parser.
     ///   - ruleId: Rule identifier the policy is installed on.
+    ///   - guardedToken: The rule's call-contract target (the token a
+    ///     spending-limit policy guards), or `nil` for non-token rules. Used to
+    ///     resolve the decimal scale for formatting a stored spending-limit
+    ///     amount. Ignored for non-spending-limit policy types.
     /// - Returns: Parsed parameters, or `nil` when the entry cannot be read
     ///   or its shape does not match `info.type`.
     func readPolicyParams(
         info: PolicyInfo,
-        ruleId: UInt32
+        ruleId: UInt32,
+        guardedToken: String? = nil
     ) async -> PolicyParams? {
         guard let rpcUrl, let contractId = demoState.contractId else { return nil }
         let scVal = await fetchPolicyStorageValue(
@@ -104,7 +109,16 @@ public extension ContextRuleFlow {
         case "threshold":
             return parseThresholdParams(scVal)
         case "spending_limit":
-            return parseSpendingLimitParams(scVal)
+            // why: a failed decimals read must not silently fall back to a
+            // wrong scale; on failure the inline editor is omitted (nil) so the
+            // user removes and re-adds the policy rather than editing a
+            // mis-scaled amount.
+            guard let decimals = try? await resolveSpendingLimitDecimals(
+                forGuardedToken: guardedToken
+            ) else {
+                return nil
+            }
+            return parseSpendingLimitParams(scVal, decimals: decimals)
         case "weighted_threshold":
             return parseWeightedThresholdParams(scVal)
         default:
@@ -362,7 +376,7 @@ public extension ContextRuleFlow {
         for (index, entry) in diff.newPolicies.enumerated() {
             let step = "Adding policy \(index + 1) of \(diff.newPolicies.count)"
             onProgress("Updating rule #\(diff.ruleId)...")
-            guard let installParams = entry.scVal else {
+            guard let spec = entry.installSpec else {
                 return ContextRuleEditResult(
                     success: false,
                     completedOperations: completed,
@@ -375,10 +389,11 @@ public extension ContextRuleFlow {
                 )
             }
             let outcome = await runStep(step: step) {
-                try await manager.addPolicyToRule(
+                try await self.dispatchAddPolicy(
+                    manager: manager,
                     ruleId: diff.ruleId,
                     policyAddress: entry.address,
-                    installParams: installParams,
+                    spec: spec,
                     selectedSigners: selectedSigners
                 )
             }

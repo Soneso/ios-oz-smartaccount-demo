@@ -72,6 +72,9 @@ public enum DemoFlowFactory {
         let ledger: (any LatestLedgerSource)? = demoState.kit.map {
             SorobanLatestLedgerSource(rpcUrl: $0.config.rpcUrl)
         }
+        let decimalsResolver: (any TokenDecimalsResolverType)? = demoState.kit.map {
+            TokenDecimalsResolverAdapter($0.transactionOperations)
+        }
         return ContextRuleFlow(
             demoState: demoState,
             activityLog: activityLog,
@@ -81,7 +84,8 @@ public enum DemoFlowFactory {
             webAuthnVerifierAddress: demoState.kit?.config.webauthnVerifierAddress,
             ed25519VerifierAddress: DemoConfig.ed25519VerifierAddress,
             ledgerSource: ledger,
-            rpcUrl: demoState.kit?.config.rpcUrl
+            rpcUrl: demoState.kit?.config.rpcUrl,
+            tokenDecimalsResolver: decimalsResolver
         )
     }
 

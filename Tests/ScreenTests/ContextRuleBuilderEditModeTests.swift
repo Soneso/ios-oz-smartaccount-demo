@@ -77,7 +77,7 @@ struct EditOperationSummaryCopyTests {
             info: knownPolicies[0],
             label: "x",
             address: knownPolicies[0].address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: nil,
             isOriginal: false
         )

@@ -228,13 +228,34 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
         return Self.successTx("removeSigner")
     }
 
-    func addPolicyToRule(
+    func addSimpleThresholdToRule(
         ruleId: UInt32,
         policyAddress: String,
-        installParams: SCValXDR,
+        threshold: UInt32,
         selectedSigners: [OZSelectedSigner]
     ) async throws -> OZTransactionResult {
-        return Self.successTx("addPolicy")
+        return Self.successTx("addSimpleThreshold")
+    }
+
+    func addWeightedThresholdToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        entries: [PolicyWeightedEntry],
+        threshold: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        return Self.successTx("addWeightedThreshold")
+    }
+
+    func addSpendingLimitToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        amount: String,
+        decimals: Int,
+        periodLedgers: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        return Self.successTx("addSpendingLimit")
     }
 
     func removePolicyFromRule(

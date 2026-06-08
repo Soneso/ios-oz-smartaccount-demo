@@ -112,6 +112,23 @@ public struct ContextRuleBuilderCore: View {
     @State internal var signerWeights: [String: String] = [:]
 
     // -------------------------------------------------------------------------
+    // MARK: - Spending-limit decimals state
+    // -------------------------------------------------------------------------
+
+    /// Decimal scale used when converting a spending-limit amount to base units.
+    ///
+    /// Resolved from the guarded token (the call-contract target): native XLM
+    /// and non-token rules use ``nativeTokenDecimals``; a custom guarded token's
+    /// own `decimals()` value is fetched and stored here. The spending-limit
+    /// forms read this value so the conversion matches the token's scale.
+    @State internal var spendingLimitDecimals: Int = nativeTokenDecimals
+
+    /// Set when the token-decimals fetch for the guarded token fails. While
+    /// non-nil the spending-limit "Add" button is disabled and the error is
+    /// shown, so an amount is never converted with the wrong scale.
+    @State internal var spendingLimitDecimalsError: String?
+
+    // -------------------------------------------------------------------------
     // MARK: - Submission state
     // -------------------------------------------------------------------------
 
@@ -209,6 +226,7 @@ public struct ContextRuleBuilderCore: View {
             }
             .task { await loadAvailableSigners() }
             .task(id: editRuleId) { await loadRuleIfNeeded() }
+            .task(id: spendingLimitGuardedToken) { await resolveSpendingLimitDecimals() }
             .sheet(isPresented: $showCreateSignerPicker) {
                 signerPickerSheet
             }
@@ -400,6 +418,8 @@ public struct ContextRuleBuilderCore: View {
             fieldErrors: $fieldErrors,
             signers: effectiveSigners,
             isSubmitting: isSubmitting,
+            spendingLimitDecimals: spendingLimitDecimals,
+            spendingLimitDecimalsError: spendingLimitDecimalsError,
             isEditing: isEditing,
             policyEntries: policyEntries,
             onAddEntry: { entry in appendPolicyEntry(entry) },

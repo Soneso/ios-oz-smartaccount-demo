@@ -23,8 +23,12 @@ struct StagedPolicyModelTests {
     @Test("id mirrors address")
     func idMatchesAddress() throws {
         let info = try #require(knownPolicies.first { $0.type == "threshold" })
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 1)
-        let staged = StagedPolicy(info: info, label: "x", address: info.address, scVal: scVal)
+        let staged = StagedPolicy(
+            info: info,
+            label: "x",
+            address: info.address,
+            installSpec: .simpleThreshold(threshold: 1)
+        )
         #expect(staged.id == info.address)
     }
 }
@@ -58,7 +62,7 @@ struct PolicyManagementSectionConstructionTests {
             info: info,
             label: "Threshold: 1-of-N",
             address: info.address,
-            scVal: PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 1)
+            installSpec: .simpleThreshold(threshold: 1)
         )
         _ = PolicyManagementSection(
             policies: .constant([staged]),

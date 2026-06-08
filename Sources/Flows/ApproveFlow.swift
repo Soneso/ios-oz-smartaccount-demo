@@ -277,7 +277,7 @@ public final class ApproveFlow {
     /// - Returns: `ApproveResult` describing the outcome.
     /// - Throws: `ApproveFlowError.alreadyInProgress` when reentered;
     ///   `ApproveFlowError.invalidAmount` when the amount cannot be parsed
-    ///   into a positive `Int64` base-units value;
+    ///   into a positive base-units value within the signed 128-bit range;
     ///   `SmartAccountWalletException.NotConnected` when no wallet is connected; any
     ///   SDK error including `WebAuthnException.Cancelled` for user
     ///   cancellations.
@@ -467,7 +467,7 @@ public final class ApproveFlow {
     ///   account contract ID cannot be decoded as a C-address (corrupt
     ///   ``DemoState/contractId`` — should not happen in normal flow);
     ///   `ApproveFlowError.invalidAmount` if the amount is not a positive
-    ///   decimal fitting in `Int64` base units.
+    ///   decimal within the signed 128-bit base-units range.
     internal func buildApproveArgs(
         smartAccountContractId: String,
         spenderAddress: String,
@@ -481,13 +481,18 @@ public final class ApproveFlow {
         } catch {
             throw ApproveFlowError.invalidSmartAccountAddress(reason: error.localizedDescription)
         }
-        guard let baseUnits = baseUnitsFromDecimalAmount(amount.trimmingCharacters(in: .whitespaces)),
-              baseUnits > 0 else {
+        guard let baseUnits = baseUnitsFromDecimalAmount(
+            amount.trimmingCharacters(in: .whitespaces),
+            decimals: nativeTokenDecimals
+        ) else {
             throw ApproveFlowError.invalidAmount
         }
-        let amountScVal = SCValXDR.i128(
-            Int128PartsXDR(hi: 0, lo: UInt64(bitPattern: baseUnits))
-        )
+        let amountScVal: SCValXDR
+        do {
+            amountScVal = try SCValXDR.i128(stringValue: baseUnits)
+        } catch {
+            throw ApproveFlowError.invalidAmount
+        }
         return [
             .address(fromAddr),
             .address(spenderAddr),
@@ -580,7 +585,8 @@ public enum ApproveFlowError: Error, Sendable {
     /// actionable message that does not blame the user's spender input.
     case invalidSmartAccountAddress(reason: String)
 
-    /// The amount string is not a positive decimal that fits in `Int64` base units.
+    /// The amount string is not a positive decimal within the signed 128-bit
+    /// base-units range.
     case invalidAmount
 
     /// The registered keypair for a delegated signer derived a different

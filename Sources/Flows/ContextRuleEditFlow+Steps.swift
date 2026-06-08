@@ -197,7 +197,7 @@ extension ContextRuleFlow {
                 failedStep: step
             )
         }
-        guard let installParams = entry.scVal else {
+        guard let spec = entry.installSpec else {
             return .partialFailure(
                 stepCount: 0,
                 hashes: [],
@@ -213,7 +213,7 @@ extension ContextRuleFlow {
             ruleId: ruleId,
             entry: entry,
             onChainId: onChainId,
-            installParams: installParams,
+            spec: spec,
             step: step,
             selectedSigners: selectedSigners,
             onProgress: onProgress
@@ -227,7 +227,7 @@ extension ContextRuleFlow {
         ruleId: UInt32,
         entry: EditPolicyEntry,
         onChainId: UInt32,
-        installParams: SCValXDR,
+        spec: PolicyInstallSpec,
         step: String,
         selectedSigners: [OZSelectedSigner],
         onProgress: @MainActor @Sendable (String) -> Void
@@ -259,10 +259,11 @@ extension ContextRuleFlow {
         let reAddStep = "\(step) (re-add)"
         onProgress("\(step) (adding new)...")
         let addOutcome = await runStep(step: reAddStep) {
-            try await manager.addPolicyToRule(
+            try await self.dispatchAddPolicy(
+                manager: manager,
                 ruleId: ruleId,
                 policyAddress: entry.address,
-                installParams: installParams,
+                spec: spec,
                 selectedSigners: selectedSigners
             )
         }
@@ -282,23 +283,49 @@ extension ContextRuleFlow {
     }
     // swiftlint:enable function_parameter_count function_body_length
 
-    /// Decodes the threshold value from an encoded simple-threshold map
-    /// (`Map { Symbol("threshold"): U32 }`). Returns `nil` when the shape is
-    /// not recognised.
-    internal func decodeThresholdFromMap(_ scVal: SCValXDR) -> UInt32? {
-        guard case .map(let entries) = scVal, let entries else { return nil }
-        for entry in entries where isThresholdSymbol(entry.key) {
-            if case .u32(let value) = entry.val {
-                return value
-            }
+    /// Dispatches an add-policy call to the matching typed convenience method on
+    /// the manager based on the policy spec's type. The weighted-threshold path
+    /// maps ``PolicyWeightedEntry`` values to ``OZSignerWeightEntry`` here in the
+    /// flow layer.
+    internal func dispatchAddPolicy(
+        manager: any ContextRuleManagerFullType,
+        ruleId: UInt32,
+        policyAddress: String,
+        spec: PolicyInstallSpec,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        switch spec {
+        case .simpleThreshold(let threshold):
+            return try await manager.addSimpleThresholdToRule(
+                ruleId: ruleId,
+                policyAddress: policyAddress,
+                threshold: threshold,
+                selectedSigners: selectedSigners
+            )
+        case .weightedThreshold(let entries, let threshold):
+            return try await manager.addWeightedThresholdToRule(
+                ruleId: ruleId,
+                policyAddress: policyAddress,
+                entries: entries,
+                threshold: threshold,
+                selectedSigners: selectedSigners
+            )
+        case .spendingLimit(let amount, let decimals, let periodLedgers):
+            return try await manager.addSpendingLimitToRule(
+                ruleId: ruleId,
+                policyAddress: policyAddress,
+                amount: amount,
+                decimals: decimals,
+                periodLedgers: periodLedgers,
+                selectedSigners: selectedSigners
+            )
         }
-        return nil
     }
 
-    private func isThresholdSymbol(_ scVal: SCValXDR) -> Bool {
-        if case .symbol(let key) = scVal, key == "threshold" {
-            return true
-        }
-        return false
+    /// Extracts the threshold value from a ``PolicyInstallSpec/simpleThreshold``
+    /// variant. Returns `nil` for any other spec or `nil` spec.
+    internal func thresholdFromSpec(_ spec: PolicyInstallSpec?) -> UInt32? {
+        guard case .simpleThreshold(let threshold) = spec else { return nil }
+        return threshold
     }
 }

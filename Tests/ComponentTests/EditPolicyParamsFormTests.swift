@@ -35,7 +35,7 @@ struct EditPolicyParamsFormConstructionTests {
             info: info,
             label: "Threshold: 2-of-N",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 1,
             isOriginal: true,
             modified: false,
@@ -63,7 +63,7 @@ struct EditPolicyParamsFormConstructionTests {
             info: info,
             label: "Limit: 10 / 1 day(s)",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 2,
             isOriginal: true,
             modified: false,
@@ -91,7 +91,7 @@ struct EditPolicyParamsFormConstructionTests {
             info: info,
             label: "Weighted: threshold=10",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 3,
             isOriginal: true,
             modified: false,
@@ -119,7 +119,7 @@ struct EditPolicyParamsFormConstructionTests {
             info: info,
             label: "x",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 1,
             isOriginal: true,
             modified: false,
@@ -138,23 +138,22 @@ struct EditPolicyParamsFormConstructionTests {
 @Suite("EditPolicyEntry.with")
 struct EditPolicyEntryWithTests {
 
-    @Test("with(scVal:) replaces the install-params SCVal")
-    func replacesScVal() {
+    @Test("with(installSpec:) replaces the typed install spec")
+    func replacesInstallSpec() {
         let info = knownPolicies[0]
         let entry = EditPolicyEntry(
             info: info,
             label: "x",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 1,
             isOriginal: true
         )
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 2)
-        let updated = entry.with(scVal: scVal)
-        if case .map = updated.scVal {
-            // OK
+        let updated = entry.with(installSpec: .simpleThreshold(threshold: 2))
+        if case .simpleThreshold(let t) = updated.installSpec {
+            #expect(t == 2)
         } else {
-            Issue.record("scVal not updated")
+            Issue.record("installSpec not updated")
         }
     }
 
@@ -165,7 +164,7 @@ struct EditPolicyEntryWithTests {
             info: info,
             label: "before",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 1,
             isOriginal: true
         )
@@ -180,7 +179,7 @@ struct EditPolicyEntryWithTests {
             info: info,
             label: "x",
             address: info.address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: 1,
             isOriginal: true,
             modified: false

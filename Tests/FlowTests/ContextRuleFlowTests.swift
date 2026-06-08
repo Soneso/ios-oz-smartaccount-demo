@@ -369,3 +369,83 @@ struct ContextRuleFlowCancellationTests {
         }
     }
 }
+
+// ============================================================================
+// MARK: - Spending-limit decimals resolution
+// ============================================================================
+
+@Suite("ContextRuleFlow: Spending-Limit Decimals")
+struct ContextRuleFlowSpendingDecimalsTests {
+
+    /// A valid non-native token contract (the spending-limit policy address from
+    /// the demo's known policies), used to exercise the fetch path.
+    static let customToken = "CBQE7L3UNP5IR4I7IBKLS7NV256WHR5TTH26HTMUIK7WXJC6J64RSE2L"
+
+    @Test("Native XLM guarded token returns 7 without fetching")
+    @MainActor
+    func nativeReturnsSevenNoFetch() async throws {
+        let resolver = MockTokenDecimalsResolver()
+        let made = ContextRuleFixtures.makeFlow(tokenDecimalsResolver: resolver)
+
+        let decimals = try await made.flow.resolveSpendingLimitDecimals(
+            forGuardedToken: DemoConfig.nativeTokenContract
+        )
+
+        #expect(decimals == nativeTokenDecimals)
+        #expect(resolver.callCount == 0)
+    }
+
+    @Test("Nil guarded token returns 7 without fetching")
+    @MainActor
+    func nilReturnsSevenNoFetch() async throws {
+        let resolver = MockTokenDecimalsResolver()
+        let made = ContextRuleFixtures.makeFlow(tokenDecimalsResolver: resolver)
+
+        let decimals = try await made.flow.resolveSpendingLimitDecimals(forGuardedToken: nil)
+
+        #expect(decimals == nativeTokenDecimals)
+        #expect(resolver.callCount == 0)
+    }
+
+    @Test("Custom guarded token fetches the token's decimals")
+    @MainActor
+    func customTokenFetchesDecimals() async throws {
+        let resolver = MockTokenDecimalsResolver()
+        resolver.result = 2
+        let made = ContextRuleFixtures.makeFlow(tokenDecimalsResolver: resolver)
+
+        let decimals = try await made.flow.resolveSpendingLimitDecimals(
+            forGuardedToken: Self.customToken
+        )
+
+        #expect(decimals == 2)
+        #expect(resolver.callCount == 1)
+        #expect(resolver.lastTokenContract == Self.customToken)
+    }
+
+    @Test("Custom token decimals fetch failure propagates")
+    @MainActor
+    func customTokenFetchFailurePropagates() async throws {
+        let resolver = MockTokenDecimalsResolver()
+        resolver.error = MockContextRuleNetworkError(detail: "decimals read failed")
+        let made = ContextRuleFixtures.makeFlow(tokenDecimalsResolver: resolver)
+
+        await #expect(throws: MockContextRuleNetworkError.self) {
+            _ = try await made.flow.resolveSpendingLimitDecimals(
+                forGuardedToken: Self.customToken
+            )
+        }
+    }
+
+    @Test("Missing resolver throws tokenDecimalsUnavailable for a custom token")
+    @MainActor
+    func missingResolverThrows() async throws {
+        let made = ContextRuleFixtures.makeFlow(tokenDecimalsResolver: nil)
+
+        await #expect(throws: ContextRuleFlowError.self) {
+            _ = try await made.flow.resolveSpendingLimitDecimals(
+                forGuardedToken: Self.customToken
+            )
+        }
+    }
+}

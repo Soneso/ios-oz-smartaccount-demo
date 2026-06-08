@@ -7,6 +7,57 @@ import Foundation
 import stellarsdk
 
 // ============================================================================
+// MARK: - PolicyWeightedEntry
+// ============================================================================
+
+/// A signer-weight pair staged in the weighted-threshold form.
+///
+/// Carries the original signer object and its assigned vote weight in a
+/// named struct so the value satisfies `Sendable` without wrapping an
+/// existential in an anonymous tuple.
+public struct PolicyWeightedEntry: Sendable {
+
+    /// The signer contributing `weight` votes when it authorizes.
+    public let signer: any OZSmartAccountSigner
+
+    /// Vote weight contributed by the signer. Must be greater than zero.
+    public let weight: UInt32
+
+    public init(signer: any OZSmartAccountSigner, weight: UInt32) {
+        self.signer = signer
+        self.weight = weight
+    }
+}
+
+// ============================================================================
+// MARK: - PolicyInstallSpec
+// ============================================================================
+
+/// Primitive description of a policy staged in the add-policy form.
+///
+/// Carries enough information for the flow layer to call the appropriate
+/// `OZPolicyManager` convenience method without any SDK-encoded blob crossing
+/// the UI/flow boundary. The flow layer converts this to the matching
+/// `OZPolicyInstallParams` variant and submits.
+public enum PolicyInstallSpec: Sendable {
+
+    /// Simple threshold policy: requires `threshold` of the context rule's
+    /// signers to authorize. All signers carry equal weight.
+    case simpleThreshold(threshold: UInt32)
+
+    /// Weighted threshold policy: authorization succeeds when the summed
+    /// weights of authorizing signers meet or exceed `threshold`.
+    case weightedThreshold(entries: [PolicyWeightedEntry], threshold: UInt32)
+
+    /// Spending limit policy: caps cumulative spend within a rolling window.
+    ///
+    /// `amount` is the decimal display string the user entered (e.g. `"100.5"`).
+    /// `decimals` is the token's scale, resolved by the component before staging.
+    /// `periodLedgers` is the already-computed ledger count for the chosen period.
+    case spendingLimit(amount: String, decimals: Int, periodLedgers: UInt32)
+}
+
+// ============================================================================
 // MARK: - EditSignerEntry
 // ============================================================================
 
@@ -114,10 +165,10 @@ public struct EditPolicyEntry: Sendable {
     /// Policy contract address (`C…`).
     public let address: String
 
-    /// Encoded install parameters, or `nil` for an existing original policy
-    /// whose params have not been edited (in which case the existing on-chain
-    /// params remain installed).
-    public let scVal: SCValXDR?
+    /// Typed primitive install parameters, or `nil` for an existing original
+    /// policy whose params have not been edited (in which case the existing
+    /// on-chain params remain installed).
+    public let installSpec: PolicyInstallSpec?
 
     /// On-chain policy identifier assigned by the contract, or `nil` for newly
     /// staged entries.
@@ -137,7 +188,7 @@ public struct EditPolicyEntry: Sendable {
         info: PolicyInfo?,
         label: String,
         address: String,
-        scVal: SCValXDR?,
+        installSpec: PolicyInstallSpec?,
         onChainId: UInt32?,
         isOriginal: Bool,
         modified: Bool = false,
@@ -146,7 +197,7 @@ public struct EditPolicyEntry: Sendable {
         self.info = info
         self.label = label
         self.address = address
-        self.scVal = scVal
+        self.installSpec = installSpec
         self.onChainId = onChainId
         self.isOriginal = isOriginal
         self.modified = modified
@@ -156,20 +207,20 @@ public struct EditPolicyEntry: Sendable {
     /// Returns a copy of this entry with selected fields replaced.
     public func with(
         label: String? = nil,
-        scVal: SCValXDR?? = nil,
+        installSpec: PolicyInstallSpec?? = nil,
         modified: Bool? = nil
     ) -> Self {
-        let nextScVal: SCValXDR?
-        if let unwrapped = scVal {
-            nextScVal = unwrapped
+        let nextSpec: PolicyInstallSpec?
+        if let unwrapped = installSpec {
+            nextSpec = unwrapped
         } else {
-            nextScVal = self.scVal
+            nextSpec = self.installSpec
         }
         return Self(
             info: info,
             label: label ?? self.label,
             address: address,
-            scVal: nextScVal,
+            installSpec: nextSpec,
             onChainId: onChainId,
             isOriginal: isOriginal,
             modified: modified ?? self.modified,

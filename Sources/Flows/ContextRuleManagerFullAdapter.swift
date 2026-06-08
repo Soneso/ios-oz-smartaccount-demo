@@ -83,6 +83,39 @@ public struct SmartAccountExecutorAdapter: SmartAccountExecutorType, Sendable {
 }
 
 // ============================================================================
+// MARK: - TokenDecimalsResolverType
+// ============================================================================
+
+/// Abstraction over the SDK's token `decimals()` read used by the edit flow to
+/// scale spending-limit amounts for a non-native guarded token.
+///
+/// Tests inject a mock that returns a fixed value or throws.
+public protocol TokenDecimalsResolverType: Sendable {
+
+    /// Reads the `decimals()` value from a SEP-41 token contract.
+    func fetchTokenDecimals(tokenContract: String) async throws -> Int
+}
+
+// ============================================================================
+// MARK: - TokenDecimalsResolverAdapter
+// ============================================================================
+
+/// Production adapter that forwards `TokenDecimalsResolverType` calls to the
+/// bare `OZTransactionOperations` exposed by an `OZSmartAccountKit`.
+public struct TokenDecimalsResolverAdapter: TokenDecimalsResolverType, Sendable {
+
+    private let transactionOperations: OZTransactionOperations
+
+    public init(_ transactionOperations: OZTransactionOperations) {
+        self.transactionOperations = transactionOperations
+    }
+
+    public func fetchTokenDecimals(tokenContract: String) async throws -> Int {
+        return try await transactionOperations.fetchTokenDecimals(tokenContract: tokenContract)
+    }
+}
+
+// ============================================================================
 // MARK: - ContextRuleManagerFullAdapter
 // ============================================================================
 
@@ -234,16 +267,53 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
         )
     }
 
-    public func addPolicyToRule(
+    public func addSimpleThresholdToRule(
         ruleId: UInt32,
         policyAddress: String,
-        installParams: SCValXDR,
+        threshold: UInt32,
         selectedSigners: [OZSelectedSigner]
     ) async throws -> OZTransactionResult {
-        return try await policyManager.addPolicy(
+        return try await policyManager.addSimpleThreshold(
             contextRuleId: ruleId,
             policyAddress: policyAddress,
-            installParams: installParams,
+            threshold: threshold,
+            selectedSigners: selectedSigners
+        )
+    }
+
+    public func addWeightedThresholdToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        entries: [PolicyWeightedEntry],
+        threshold: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        let signerWeights = entries.map {
+            OZSignerWeightEntry(signer: $0.signer, weight: $0.weight)
+        }
+        return try await policyManager.addWeightedThreshold(
+            contextRuleId: ruleId,
+            policyAddress: policyAddress,
+            signerWeights: signerWeights,
+            threshold: threshold,
+            selectedSigners: selectedSigners
+        )
+    }
+
+    public func addSpendingLimitToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        amount: String,
+        decimals: Int,
+        periodLedgers: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
+        return try await policyManager.addSpendingLimit(
+            contextRuleId: ruleId,
+            policyAddress: policyAddress,
+            spendingLimit: amount,
+            periodLedgers: periodLedgers,
+            decimals: decimals,
             selectedSigners: selectedSigners
         )
     }

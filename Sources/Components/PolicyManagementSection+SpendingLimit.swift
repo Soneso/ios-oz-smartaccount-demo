@@ -41,6 +41,9 @@ extension PolicyManagementSection {
             }
         FieldErrorText(error: fieldErrors["spendingPeriod"])
         spendingLimitHelperText
+        if let decimalsError = spendingLimitDecimalsError {
+            FieldErrorText(error: decimalsError)
+        }
         addSpendingLimitButton(info: info)
     }
 
@@ -86,7 +89,8 @@ extension PolicyManagementSection {
 
     private var spendingLimitDisabled: Bool {
         spendingLimitAmount.trimmingCharacters(in: .whitespaces).isEmpty ||
-        spendingLimitPeriodDays.trimmingCharacters(in: .whitespaces).isEmpty
+        spendingLimitPeriodDays.trimmingCharacters(in: .whitespaces).isEmpty ||
+        spendingLimitDecimalsError != nil
     }
 
     internal func addSpendingLimit(info: PolicyInfo) {
@@ -100,17 +104,14 @@ extension PolicyManagementSection {
             fieldErrors["spendingPeriod"] = "Must be at least 1 day"
             return
         }
-        guard let baseUnits = baseUnitsFromDecimalAmount(amountStr), baseUnits > 0 else {
-            fieldErrors["spendingAmount"] = "Must be a positive number"
-            return
-        }
         let periodLedgers = UInt32(days * StellarProtocol.ledgersPerDay)
-        let scVal = PolicyScValBuilders.buildSpendingLimitScVal(
-            limit: baseUnits,
+        let spec = PolicyInstallSpec.spendingLimit(
+            amount: amountStr,
+            decimals: spendingLimitDecimals,
             periodLedgers: periodLedgers
         )
         let label = "Limit: \(amountStr) / \(pluralize(days, "day", "days"))"
-        registerSpendingLimitPolicy(info: info, label: label, scVal: scVal)
+        registerSpendingLimitPolicy(info: info, label: label, spec: spec)
         spendingLimitAmount = ""
         spendingLimitPeriodDays = ""
         selectedPolicyType = nil
@@ -122,14 +123,14 @@ extension PolicyManagementSection {
     private func registerSpendingLimitPolicy(
         info: PolicyInfo,
         label: String,
-        scVal: ScVal
+        spec: PolicyInstallSpec
     ) {
         if isEditing {
             let entry = EditPolicyEntry(
                 info: info,
                 label: label,
                 address: info.address,
-                scVal: scVal,
+                installSpec: spec,
                 onChainId: nil,
                 isOriginal: false
             )
@@ -140,7 +141,7 @@ extension PolicyManagementSection {
                     info: info,
                     label: label,
                     address: info.address,
-                    scVal: scVal
+                    installSpec: spec
                 )
             )
         }

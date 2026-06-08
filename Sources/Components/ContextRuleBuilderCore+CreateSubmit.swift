@@ -51,7 +51,7 @@ extension ContextRuleBuilderCore {
         }
 
         let flowPolicies = policies.map {
-            FlowPolicyEntry(address: $0.address, scVal: $0.scVal)
+            FlowPolicyEntry(address: $0.address, installSpec: $0.installSpec)
         }
 
         if !chosen.isEmpty {

@@ -77,10 +77,10 @@ extension EditPolicyParamsForm {
         }
         fieldErrors.removeValue(forKey: "threshold")
         let changed = parsed != params.threshold
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: parsed)
+        let spec = PolicyInstallSpec.simpleThreshold(threshold: parsed)
         let updated = entry.with(
             label: "Threshold: \(parsed)-of-N",
-            scVal: changed ? scVal : nil,
+            installSpec: changed ? spec : nil,
             modified: changed
         )
         onEntryUpdated(updated)
@@ -97,7 +97,8 @@ extension EditPolicyParamsForm {
             fieldErrors["amount"] = "Amount must contain at most one decimal point"
             return
         }
-        guard let baseUnits = baseUnitsFromDecimalAmount(amount), baseUnits > 0 else {
+        guard let _ = Decimal(string: amount.replacingOccurrences(of: ",", with: ".")),
+              !amount.hasPrefix("-") else {
             fieldErrors["amount"] = "Amount must be a positive number"
             return
         }
@@ -111,13 +112,14 @@ extension EditPolicyParamsForm {
         let periodChanged = days != params.periodDays
         let changed = amountChanged || periodChanged
         let periodLedgers = UInt32(days * StellarProtocol.ledgersPerDay)
-        let scVal = PolicyScValBuilders.buildSpendingLimitScVal(
-            limit: baseUnits,
+        let spec = PolicyInstallSpec.spendingLimit(
+            amount: amount,
+            decimals: spendingLimitDecimals,
             periodLedgers: periodLedgers
         )
         let updated = entry.with(
             label: "Limit: \(amount) / \(pluralize(days, "day", "days"))",
-            scVal: changed ? scVal : nil,
+            installSpec: changed ? spec : nil,
             modified: changed
         )
         onEntryUpdated(updated)
@@ -142,7 +144,7 @@ extension EditPolicyParamsForm {
         }
         fieldErrors.removeValue(forKey: "weightedSummary")
         var perSignerErrors: [String: String] = [:]
-        var weightsForBuilder: [(signer: ScVal, weight: UInt32)] = []
+        var weightedEntries: [PolicyWeightedEntry] = []
         var totalWeight: UInt64 = 0
         var changed = threshold != params.threshold
         for signer in signers {
@@ -154,14 +156,7 @@ extension EditPolicyParamsForm {
             }
             let originalWeight = params.signerWeights?[key]
             if originalWeight != weight { changed = true }
-            let signerScVal: ScVal
-            do {
-                signerScVal = try signer.toScVal()
-            } catch {
-                perSignerErrors[key] = "Could not encode signer for weight"
-                continue
-            }
-            weightsForBuilder.append((signer: signerScVal, weight: weight))
+            weightedEntries.append(PolicyWeightedEntry(signer: signer, weight: weight))
             totalWeight += UInt64(weight)
         }
         perSignerWeightErrors = perSignerErrors
@@ -172,13 +167,10 @@ extension EditPolicyParamsForm {
             return
         }
         fieldErrors.removeValue(forKey: "weightedSummary")
-        let scVal = PolicyScValBuilders.buildWeightedThresholdScVal(
-            weights: weightsForBuilder,
-            threshold: threshold
-        )
+        let spec = PolicyInstallSpec.weightedThreshold(entries: weightedEntries, threshold: threshold)
         let updated = entry.with(
             label: "Weighted: threshold=\(threshold)",
-            scVal: changed ? scVal : nil,
+            installSpec: changed ? spec : nil,
             modified: changed
         )
         onEntryUpdated(updated)

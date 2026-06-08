@@ -9,6 +9,7 @@ import Foundation
 #else
 @testable import SmartAccountDemoMacLib
 #endif
+import stellarsdk
 import Testing
 
 // ============================================================================
@@ -22,80 +23,6 @@ import Testing
 /// trailing zeros.
 @Suite("BalanceUtils")
 struct BalanceUtilsTests {
-
-    // -------------------------------------------------------------------------
-    // MARK: - formatBaseUnitsAsDecimal(Int64)
-    // -------------------------------------------------------------------------
-
-    @Test("Zero base units formats as 0.0")
-    func zeroBaseUnits() {
-        #expect(formatBaseUnitsAsDecimal(Int64(0)) == "0.0")
-    }
-
-    @Test("Exactly 1 XLM (10_000_000 stroops) formats as 1.0")
-    func oneXlm() {
-        #expect(formatBaseUnitsAsDecimal(Int64(10_000_000)) == "1.0")
-    }
-
-    @Test("100 XLM formats correctly")
-    func oneHundredXlm() {
-        #expect(formatBaseUnitsAsDecimal(Int64(1_000_000_000)) == "100.0")
-    }
-
-    @Test("0.5 XLM (5_000_000 stroops) formats as 0.5")
-    func halfXlm() {
-        #expect(formatBaseUnitsAsDecimal(Int64(5_000_000)) == "0.5")
-    }
-
-    @Test("Fractional part with trailing zeros strips extras, keeps 1")
-    func trailingZerosStripped() {
-        // 10_100_000 stroops = 1.01 XLM (last 5 fractional digits are 0)
-        #expect(formatBaseUnitsAsDecimal(Int64(10_100_000)) == "1.01")
-    }
-
-    @Test("All 7 fractional digits preserved when non-zero")
-    func allFractionalDigits() {
-        // 1_234_567 stroops = 0.1234567 XLM
-        #expect(formatBaseUnitsAsDecimal(Int64(1_234_567)) == "0.1234567")
-    }
-
-    @Test("Negative amount formats with leading minus")
-    func negativeAmount() {
-        #expect(formatBaseUnitsAsDecimal(Int64(-10_000_000)) == "-1.0")
-    }
-
-    @Test("Int64.min returns the literal string without crash")
-    func int64Min() {
-        #expect(formatBaseUnitsAsDecimal(Int64.min) == "-922337203685.4775808")
-    }
-
-    @Test("Int64.max formats without overflow")
-    func int64Max() {
-        // Int64.max = 9_223_372_036_854_775_807 stroops
-        // = 922337203685.4775807 XLM
-        let result = formatBaseUnitsAsDecimal(Int64.max)
-        #expect(result.hasPrefix("922337203685."))
-        #expect(result.hasSuffix("7"))
-    }
-
-    // -------------------------------------------------------------------------
-    // MARK: - formatBaseUnitsAsDecimal(String)
-    // -------------------------------------------------------------------------
-
-    @Test("String overload parses and formats valid base-units string")
-    func stringOverloadValid() {
-        #expect(formatBaseUnitsAsDecimal("10000000") == "1.0")
-    }
-
-    @Test("String overload returns 0.0 for non-numeric input")
-    func stringOverloadInvalid() {
-        #expect(formatBaseUnitsAsDecimal("not-a-number") == "0.0")
-    }
-
-    @Test("String overload returns 0.0 for empty string")
-    func stringOverloadEmpty() {
-        #expect(formatBaseUnitsAsDecimal("") == "0.0")
-    }
 
     // -------------------------------------------------------------------------
     // MARK: - formatBaseUnitsAsDecimal(Int128) — lossless overload
@@ -180,5 +107,136 @@ struct BalanceUtilsTests {
     func smallestUnitsInt128Aliases() {
         let value: Int128 = 10_000_000
         #expect(formatSmallestUnitsAsDecimal(value) == formatBaseUnitsAsDecimal(value))
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - baseUnitsFromDecimalAmount(_:decimals:)
+    // -------------------------------------------------------------------------
+
+    @Test("baseUnitsFromDecimalAmount with 7 decimals scales by 10^7")
+    func baseUnitsSevenDecimals() {
+        #expect(baseUnitsFromDecimalAmount("1", decimals: 7) == "10000000")
+        #expect(baseUnitsFromDecimalAmount("1.5", decimals: 7) == "15000000")
+    }
+
+    @Test("baseUnitsFromDecimalAmount with 2 decimals scales by 10^2")
+    func baseUnitsTwoDecimals() {
+        #expect(baseUnitsFromDecimalAmount("1", decimals: 2) == "100")
+        #expect(baseUnitsFromDecimalAmount("12.34", decimals: 2) == "1234")
+    }
+
+    @Test("baseUnitsFromDecimalAmount with 0 decimals yields whole base units")
+    func baseUnitsZeroDecimals() {
+        #expect(baseUnitsFromDecimalAmount("42", decimals: 0) == "42")
+        // Fractional digits beyond the token scale are rejected, not rounded.
+        #expect(baseUnitsFromDecimalAmount("42.4", decimals: 0) == nil)
+    }
+
+    @Test("baseUnitsFromDecimalAmount with 18 decimals scales by 10^18")
+    func baseUnitsEighteenDecimals() {
+        #expect(baseUnitsFromDecimalAmount("1", decimals: 18) == "1000000000000000000")
+    }
+
+    @Test("baseUnitsFromDecimalAmount rejects negative decimals")
+    func baseUnitsNegativeDecimalsRejected() {
+        #expect(baseUnitsFromDecimalAmount("1", decimals: -1) == nil)
+    }
+
+    @Test("baseUnitsFromDecimalAmount rejects negative amount")
+    func baseUnitsNegativeAmountRejected() {
+        #expect(baseUnitsFromDecimalAmount("-1", decimals: 7) == nil)
+    }
+
+    @Test("baseUnitsFromDecimalAmount normalises comma decimal separator")
+    func baseUnitsCommaSeparator() {
+        #expect(baseUnitsFromDecimalAmount("1,5", decimals: 7) == "15000000")
+    }
+
+    @Test("baseUnitsFromDecimalAmount rejects zero and empty results")
+    func baseUnitsZeroRejected() {
+        #expect(baseUnitsFromDecimalAmount("0", decimals: 7) == nil)
+        #expect(baseUnitsFromDecimalAmount("0.0", decimals: 7) == nil)
+        #expect(baseUnitsFromDecimalAmount("", decimals: 7) == nil)
+    }
+
+    @Test("baseUnitsFromDecimalAmount rejects excess fractional precision")
+    func baseUnitsExcessFraction() {
+        // Eight fractional digits exceed the 7-decimal scale of native XLM.
+        #expect(baseUnitsFromDecimalAmount("1.12345678", decimals: 7) == nil)
+    }
+
+    @Test("baseUnitsFromDecimalAmount returns full range above Int64.max")
+    func baseUnitsAboveInt64Max() {
+        // 1000 tokens at 18 decimals = 10^21 base units, far above Int64.max
+        // (~9.22 * 10^18). The string result preserves the full value.
+        let result = baseUnitsFromDecimalAmount("1000", decimals: 18)
+        #expect(result == "1000000000000000000000")
+        // Confirm the value genuinely exceeds the Int64 ceiling.
+        #expect(Int64(result ?? "") == nil)
+        #expect(Int128(result ?? "") == Int128(1000) * Int128(1_000_000_000_000_000_000))
+    }
+
+    @Test("baseUnitsFromDecimalAmount large 7-decimal amount above Int64.max")
+    func baseUnitsLargeSevenDecimal() {
+        // 1_000_000_000_000 XLM * 10^7 = 10^19 base units (> Int64.max).
+        let result = baseUnitsFromDecimalAmount("1000000000000", decimals: 7)
+        #expect(result == "10000000000000000000")
+        #expect(Int64(result ?? "") == nil)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - formatBaseUnitsAsDecimal(_:decimals:)
+    // -------------------------------------------------------------------------
+
+    @Test("formatBaseUnitsAsDecimal Int128 with 2 decimals")
+    func formatTwoDecimals() {
+        #expect(formatBaseUnitsAsDecimal(Int128(1234), decimals: 2) == "12.34")
+        #expect(formatBaseUnitsAsDecimal(Int128(100), decimals: 2) == "1.0")
+    }
+
+    @Test("formatBaseUnitsAsDecimal Int128 with 0 decimals appends .0")
+    func formatZeroDecimals() {
+        #expect(formatBaseUnitsAsDecimal(Int128(42), decimals: 0) == "42.0")
+    }
+
+    @Test("formatBaseUnitsAsDecimal default overload matches 7-decimal explicit form")
+    func formatDefaultMatchesSeven() {
+        #expect(
+            formatBaseUnitsAsDecimal(Int128(15_000_000)) ==
+            formatBaseUnitsAsDecimal(Int128(15_000_000), decimals: 7)
+        )
+    }
+
+    @Test("baseUnitsFromDecimalAmount and formatBaseUnitsAsDecimal round-trip at non-7 scale")
+    func roundTripNonSevenScale() throws {
+        let baseUnitsStr = try #require(baseUnitsFromDecimalAmount("12.34", decimals: 2))
+        let baseUnits = try #require(Int128(baseUnitsStr))
+        #expect(formatBaseUnitsAsDecimal(baseUnits, decimals: 2) == "12.34")
+    }
+
+    @Test("Large spending-limit decimal round-trips through encode and read")
+    func roundTripLargeSpendingLimit() throws {
+        // 1000 tokens at 18 decimals overflows Int64; the full value must survive
+        // the decimal -> base units -> OZPolicyInstallParams.toScVal -> Int128 -> display round trip.
+        let decimals = 18
+        let original = "1000"
+        let baseUnitsStr = try #require(baseUnitsFromDecimalAmount(original, decimals: decimals))
+
+        let params = OZPolicyInstallParams.spendingLimit(
+            spendingLimit: baseUnitsStr,
+            periodLedgers: 100
+        )
+        let scVal = try params.toScVal()
+        guard case .map(let entriesOpt) = scVal, let entries = entriesOpt,
+              let limitEntry = entries.first(where: {
+                  if case .symbol("spending_limit") = $0.key { return true }
+                  return false
+              }) else {
+            Issue.record("Expected spending_limit entry")
+            return
+        }
+        let decoded = try SACBalanceFetcher.extractI128AsInt128(from: limitEntry.val)
+        #expect(decoded == Int128(1000) * Int128(1_000_000_000_000_000_000))
+        #expect(formatBaseUnitsAsDecimal(decoded, decimals: decimals) == "1000.0")
     }
 }

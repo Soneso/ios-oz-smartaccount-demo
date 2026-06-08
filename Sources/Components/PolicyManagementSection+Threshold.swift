@@ -55,14 +55,14 @@ extension PolicyManagementSection {
             fieldErrors["threshold"] = "Cannot exceed signer count (\(signers.count))"
             return
         }
-        let scVal = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: value)
+        let spec = PolicyInstallSpec.simpleThreshold(threshold: value)
         let label = "Threshold: \(value)-of-N"
         if isEditing {
             let entry = EditPolicyEntry(
                 info: info,
                 label: label,
                 address: info.address,
-                scVal: scVal,
+                installSpec: spec,
                 onChainId: nil,
                 isOriginal: false
             )
@@ -73,7 +73,7 @@ extension PolicyManagementSection {
                     info: info,
                     label: label,
                     address: info.address,
-                    scVal: scVal
+                    installSpec: spec
                 )
             )
         }

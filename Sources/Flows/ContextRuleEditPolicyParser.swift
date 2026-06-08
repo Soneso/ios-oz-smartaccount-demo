@@ -80,15 +80,21 @@ extension ContextRuleFlow {
     }
 
     /// Decodes a spending-limit struct map.
-    internal func parseSpendingLimitParams(_ scVal: SCValXDR) -> PolicyParams? {
+    ///
+    /// - Parameters:
+    ///   - scVal: The stored install-params map.
+    ///   - decimals: Decimal scale of the rule's guarded token, used to format
+    ///     the stored base-units amount back to a human decimal string so the
+    ///     inline editor pre-populates with the same scale the contract stored.
+    internal func parseSpendingLimitParams(_ scVal: SCValXDR, decimals: Int) -> PolicyParams? {
         guard case .map(let entries) = scVal, let entries else { return nil }
-        var baseUnits: Int64?
+        var baseUnits: Int128?
         var periodLedgers: UInt32?
         for entry in entries {
             applySpendingLimitField(entry: entry, baseUnits: &baseUnits, periodLedgers: &periodLedgers)
         }
         guard let baseUnits, let periodLedgers else { return nil }
-        let amountString = formatBaseUnitsAsDecimal(baseUnits)
+        let amountString = formatBaseUnitsAsDecimal(baseUnits, decimals: decimals)
         let days = max(1, Int(periodLedgers) / StellarProtocolConstants.ledgersPerDay)
         return PolicyParams(
             type: "spending_limit",
@@ -101,22 +107,19 @@ extension ContextRuleFlow {
 
     private func applySpendingLimitField(
         entry: SCMapEntryXDR,
-        baseUnits: inout Int64?,
+        baseUnits: inout Int128?,
         periodLedgers: inout UInt32?
     ) {
         guard case .symbol(let key) = entry.key else { return }
         switch key {
         case "spending_limit":
-            if case .i128(let parts) = entry.val {
-                // OZ contract stores positive amounts only. The full i128 is
-                // not representable as Int64, so reject any value whose high
-                // word is non-zero or whose low word exceeds Int64.max. The
-                // inline editor is omitted for these out-of-range values; the
-                // user must remove and re-add the policy to replace it.
-                let maxLo = UInt64(Int64.max)
-                if parts.hi == 0 && parts.lo <= maxLo {
-                    baseUnits = Int64(parts.lo)
-                }
+            if case .i128 = entry.val,
+               let value = try? SACBalanceFetcher.extractI128AsInt128(from: entry.val),
+               value >= 0 {
+                // The OZ contract stores non-negative spending limits across the
+                // full signed 128-bit range. Decode the value losslessly so the
+                // inline editor pre-populates with the exact stored amount.
+                baseUnits = value
             }
         case "period_ledgers":
             if case .u32(let value) = entry.val {

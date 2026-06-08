@@ -37,25 +37,20 @@ public struct ContextRuleResult: Sendable, Equatable {
 // MARK: - FlowPolicyEntry
 // ============================================================================
 
-/// A staged policy entry passed to `addContextRule(...)`.
-///
-/// The screen builds these from its form state. `scVal` is the install-parameter
-/// `SCValXDR` produced at the moment the user added the policy to the staged
-/// list. Entries with `scVal == nil` are skipped on submit — they were sourced
-/// from an existing on-chain rule and their parameters are already installed
-/// on-chain.
+/// A staged policy entry passed to `addContextRule(...)`, built by the screen
+/// from its form state.
 public struct FlowPolicyEntry: Sendable {
 
     /// Policy contract address (`C…`).
     public let address: String
 
-    /// Encoded install parameters, or `nil` when re-using an on-chain policy
+    /// Typed install parameters, or `nil` when re-using an on-chain policy
     /// without parameter changes.
-    public let scVal: SCValXDR?
+    public let installSpec: PolicyInstallSpec?
 
-    public init(address: String, scVal: SCValXDR?) {
+    public init(address: String, installSpec: PolicyInstallSpec?) {
         self.address = address
-        self.scVal = scVal
+        self.installSpec = installSpec
     }
 }
 
@@ -217,7 +212,7 @@ extension ContextRuleFlow {
     ///   - name: Human-readable rule name (already trimmed by the caller).
     ///   - validUntil: Optional absolute expiry ledger.
     ///   - signers: Signers to attach to the new rule.
-    ///   - policies: Staged policy entries (address + optional `SCValXDR`).
+    ///   - policies: Staged policy entries (address + optional typed install spec).
     ///   - selectedSigners: Multi-signer participants. Empty triggers the
     ///     single-passkey fast-path.
     ///   - delegatedSecrets: Map of G-address → S-secret for any delegated
@@ -287,17 +282,44 @@ extension ContextRuleFlow {
     private func buildPoliciesMap(_ policies: [FlowPolicyEntry]) -> [String: SCValXDR] {
         var policiesMap: [String: SCValXDR] = [:]
         for entry in policies {
-            if let scVal = entry.scVal {
-                policiesMap[entry.address] = scVal
-            } else {
+            guard let spec = entry.installSpec else {
                 let truncated = truncateAddress(entry.address)
                 activityLog.info(
-                    "Policy \(truncated) has no SCVal params and will be skipped " +
+                    "Policy \(truncated) has no install params and will be skipped " +
                     "(params already on-chain)"
                 )
+                continue
+            }
+            do {
+                policiesMap[entry.address] = try buildInstallParamsScVal(spec: spec)
+            } catch {
+                let truncated = truncateAddress(entry.address)
+                let reason = ActivityLogState.redact(error.localizedDescription)
+                activityLog.error("Policy \(truncated) encoding failed: \(reason)")
             }
         }
         return policiesMap
+    }
+
+    /// Converts a ``PolicyInstallSpec`` to the on-chain `SCValXDR` encoding by
+    /// mapping it to the matching ``OZPolicyInstallParams`` variant and calling
+    /// `toScVal()`. The weighted-threshold path maps each ``PolicyWeightedEntry``
+    /// to an ``OZSignerWeightEntry`` in the flow layer.
+    internal func buildInstallParamsScVal(spec: PolicyInstallSpec) throws -> SCValXDR {
+        let params: OZPolicyInstallParams
+        switch spec {
+        case .simpleThreshold(let threshold):
+            params = .simpleThreshold(threshold: threshold)
+        case .weightedThreshold(let entries, let threshold):
+            let signerWeights = entries.map {
+                OZSignerWeightEntry(signer: $0.signer, weight: $0.weight)
+            }
+            params = .weightedThreshold(signerWeights: signerWeights, threshold: threshold)
+        case .spendingLimit(let amount, let decimals, let periodLedgers):
+            let baseUnits = try OZTransactionOperations.amountToBaseUnits(amount, decimals: decimals)
+            params = .spendingLimit(spendingLimit: baseUnits, periodLedgers: periodLedgers)
+        }
+        return try params.toScVal()
     }
 
     private func handleAddResult(_ sdkResult: OZTransactionResult) -> ContextRuleResult {

@@ -138,8 +138,8 @@ struct LoadParsedContextRuleTests {
 @MainActor
 struct EditPolicyEntryRevertTests {
 
-    @Test("Reverting modified entry with scVal: .some(nil) clears modified flag")
-    func revertViaNilScValClearsModified() throws {
+    @Test("Reverting modified entry with installSpec: .some(nil) clears modified flag")
+    func revertViaNilSpecClearsModified() throws {
         let info = try #require(knownPolicies.first { $0.type == "threshold" })
         let originalParams = PolicyParams(
             type: "threshold",
@@ -148,12 +148,11 @@ struct EditPolicyEntryRevertTests {
             periodDays: nil,
             signerWeights: nil
         )
-        let staged = PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 2)
         let modified = EditPolicyEntry(
             info: info,
             label: "Threshold: 2-of-N",
             address: info.address,
-            scVal: staged,
+            installSpec: .simpleThreshold(threshold: 2),
             onChainId: 11,
             isOriginal: true,
             modified: true,
@@ -161,11 +160,11 @@ struct EditPolicyEntryRevertTests {
         )
         let reverted = modified.with(
             label: "Threshold: 1-of-N",
-            scVal: .some(nil),
+            installSpec: .some(nil),
             modified: false
         )
         #expect(reverted.modified == false)
-        #expect(reverted.scVal == nil)
+        #expect(reverted.installSpec == nil)
         #expect(reverted.label == "Threshold: 1-of-N")
         #expect(reverted.onChainId == 11)
         #expect(reverted.isOriginal)

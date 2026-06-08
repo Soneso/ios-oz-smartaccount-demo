@@ -579,6 +579,93 @@ struct TransferFlowTokenTests {
 }
 
 // ============================================================================
+// MARK: - Decimals selection
+// ============================================================================
+
+@Suite("TransferFlow: Decimals Selection")
+struct TransferFlowDecimalsTests {
+
+    /// A valid non-native custom token contract used to assert the nil-decimals
+    /// (SDK auto-fetch) path. Distinct from `DemoConfig.nativeTokenContract`.
+    static let customToken = "CDEMOTOKEN1234567890123456789012345678901234567890123456"
+
+    @Test("Native XLM transfer passes decimals 7 (no SDK decimals fetch)")
+    @MainActor
+    func xlmTransferUsesSevenDecimals() async throws {
+        let txOps = MockTransactionOperations()
+        txOps.result = TransferFixtures.successResult()
+        let ctx = TransferFixtures.makeFlow(txOps: txOps)
+
+        _ = try await ctx.flow.transfer(
+            tokenContract: DemoConfig.nativeTokenContract,
+            recipient: TransferFixtures.recipientG,
+            amount: "1",
+            tokenLabel: "XLM"
+        )
+
+        #expect(txOps.lastDecimals == .some(.some(nativeTokenDecimals)))
+        #expect(nativeTokenDecimals == 7)
+    }
+
+    @Test("Custom token transfer passes nil decimals (SDK auto-fetch)")
+    @MainActor
+    func customTokenTransferUsesNilDecimals() async throws {
+        let txOps = MockTransactionOperations()
+        txOps.result = TransferFixtures.successResult()
+        let ctx = TransferFixtures.makeFlow(txOps: txOps)
+        ctx.state.setDemoTokenContractId(Self.customToken)
+
+        _ = try await ctx.flow.transfer(
+            tokenContract: Self.customToken,
+            recipient: TransferFixtures.recipientG,
+            amount: "100",
+            tokenLabel: "DEMO"
+        )
+
+        #expect(txOps.lastDecimals == .some(.none))
+    }
+
+    @Test("Native XLM multi-signer transfer passes decimals 7")
+    @MainActor
+    func xlmMultiSignerUsesSevenDecimals() async throws {
+        let multiOps = MockMultiSignerManager()
+        multiOps.result = TransferFixtures.successResult()
+        let ctx = TransferFixtures.makeFlow(multiOps: multiOps)
+
+        _ = try await ctx.flow.multiSignerTransfer(
+            tokenContract: DemoConfig.nativeTokenContract,
+            recipient: TransferFixtures.recipientG,
+            amount: "5",
+            tokenLabel: "XLM",
+            chosenSigners: [],
+            delegatedSecrets: [:]
+        )
+
+        #expect(multiOps.lastDecimals == .some(.some(nativeTokenDecimals)))
+    }
+
+    @Test("Custom token multi-signer transfer passes nil decimals")
+    @MainActor
+    func customTokenMultiSignerUsesNilDecimals() async throws {
+        let multiOps = MockMultiSignerManager()
+        multiOps.result = TransferFixtures.successResult()
+        let ctx = TransferFixtures.makeFlow(multiOps: multiOps)
+        ctx.state.setDemoTokenContractId(Self.customToken)
+
+        _ = try await ctx.flow.multiSignerTransfer(
+            tokenContract: Self.customToken,
+            recipient: TransferFixtures.recipientG,
+            amount: "100",
+            tokenLabel: "DEMO",
+            chosenSigners: [],
+            delegatedSecrets: [:]
+        )
+
+        #expect(multiOps.lastDecimals == .some(.none))
+    }
+}
+
+// ============================================================================
 // MARK: - Kit nil guard
 // ============================================================================
 

@@ -105,11 +105,31 @@ public protocol ContextRuleManagerFullType: ContextRuleManagerType {
         selectedSigners: [OZSelectedSigner]
     ) async throws -> OZTransactionResult
 
-    /// Adds a policy with encoded install params to the rule.
-    func addPolicyToRule(
+    /// Adds a simple threshold policy to the rule.
+    func addSimpleThresholdToRule(
         ruleId: UInt32,
         policyAddress: String,
-        installParams: SCValXDR,
+        threshold: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
+
+    /// Adds a weighted threshold policy to the rule.
+    func addWeightedThresholdToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        entries: [PolicyWeightedEntry],
+        threshold: UInt32,
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult
+
+    /// Adds a spending limit policy to the rule. `amount` is the decimal
+    /// display string; `decimals` and `periodLedgers` are pre-computed.
+    func addSpendingLimitToRule(
+        ruleId: UInt32,
+        policyAddress: String,
+        amount: String,
+        decimals: Int,
+        periodLedgers: UInt32,
         selectedSigners: [OZSelectedSigner]
     ) async throws -> OZTransactionResult
 
@@ -161,6 +181,7 @@ public final class ContextRuleFlow {
     internal let ed25519VerifierAddress: String?
     internal let ledgerSource: (any LatestLedgerSource)?
     internal let rpcUrl: String?
+    internal let tokenDecimalsResolver: (any TokenDecimalsResolverType)?
 
     // -------------------------------------------------------------------------
     // MARK: - Re-entrancy guard
@@ -195,6 +216,11 @@ public final class ContextRuleFlow {
     ///   - rpcUrl: Soroban RPC URL used by ``readPolicyParams(info:ruleId:)``
     ///     to inspect on-chain policy storage. `nil` disables policy parameter
     ///     reads (the edit form simply omits the inline editor).
+    ///   - tokenDecimalsResolver: Reads a SEP-41 token's `decimals()` so a
+    ///     spending-limit amount on a non-native guarded token is scaled with
+    ///     the token's own decimals. `nil` causes
+    ///     ``resolveSpendingLimitDecimals(forGuardedToken:)`` to throw for any
+    ///     non-native token.
     public init(
         demoState: DemoState,
         activityLog: ActivityLogState,
@@ -204,7 +230,8 @@ public final class ContextRuleFlow {
         webAuthnVerifierAddress: String? = nil,
         ed25519VerifierAddress: String? = nil,
         ledgerSource: (any LatestLedgerSource)? = nil,
-        rpcUrl: String? = nil
+        rpcUrl: String? = nil,
+        tokenDecimalsResolver: (any TokenDecimalsResolverType)? = nil
     ) {
         self.demoState = demoState
         self.activityLog = activityLog
@@ -215,6 +242,38 @@ public final class ContextRuleFlow {
         self.ed25519VerifierAddress = ed25519VerifierAddress
         self.ledgerSource = ledgerSource
         self.rpcUrl = rpcUrl
+        self.tokenDecimalsResolver = tokenDecimalsResolver
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - Public: resolveSpendingLimitDecimals
+    // -------------------------------------------------------------------------
+
+    /// Resolves the decimal scale to apply when converting a spending-limit
+    /// amount into base units for the given guarded token.
+    ///
+    /// A spending-limit policy guards the token named by its context rule's
+    /// call-contract target. Native XLM uses `nativeTokenDecimals` directly so no
+    /// `decimals()` round trip is performed. For any other token, the token
+    /// contract's own `decimals()` value is fetched.
+    ///
+    /// - Parameter guardedToken: The guarded token contract (`C…`) for a
+    ///   call-contract rule, or `nil` when the rule does not target a specific
+    ///   token (default rule), in which case `nativeTokenDecimals` is returned.
+    /// - Returns: The number of decimal places to use for the amount conversion.
+    /// - Throws: SDK errors from `fetchTokenDecimals` when the token's decimals
+    ///   cannot be read; ``ContextRuleFlowError/notConnected`` when no resolver
+    ///   is wired (no connected kit).
+    public func resolveSpendingLimitDecimals(forGuardedToken guardedToken: String?) async throws -> Int {
+        guard let guardedToken,
+              !guardedToken.isEmpty,
+              guardedToken != DemoConfig.nativeTokenContract else {
+            return nativeTokenDecimals
+        }
+        guard let resolver = tokenDecimalsResolver else {
+            throw ContextRuleFlowError.tokenDecimalsUnavailable
+        }
+        return try await resolver.fetchTokenDecimals(tokenContract: guardedToken)
     }
 
     // -------------------------------------------------------------------------
@@ -473,6 +532,11 @@ public enum ContextRuleFlowError: Error, Sendable {
     /// detail from the SDK.
     case latestLedgerFetchFailed(reason: String)
 
+    /// The flow requires a token-decimals resolver but none was injected.
+    /// Returned by ``ContextRuleFlow/resolveSpendingLimitDecimals(forGuardedToken:)``
+    /// when called for a non-native token without a connected kit.
+    case tokenDecimalsUnavailable
+
     /// The user-entered context type could not be resolved into a valid
     /// ``OZContextRuleType`` (for example, a malformed WASM hash for the
     /// "create contract" option). Distinct from ``removeFailed`` so the call
@@ -517,6 +581,8 @@ extension ContextRuleFlowError: LocalizedError {
             return "Ledger source is not available; cannot resolve expiry."
         case .latestLedgerFetchFailed(let reason):
             return "Failed to fetch the current ledger: \(reason)."
+        case .tokenDecimalsUnavailable:
+            return "Token decimals are not available; connect a wallet first."
         case .invalidContextType(let reason):
             return "Invalid context type: \(reason)."
         case .editAlreadyInProgress:

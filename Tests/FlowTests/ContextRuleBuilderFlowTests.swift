@@ -244,17 +244,17 @@ struct AddContextRuleTests {
         #expect(made.manager.lastAddValidUntil == 12_345)
     }
 
-    @Test("Skips policy entries without SCVal params")
+    @Test("Skips policy entries without install spec")
     @MainActor
-    func addContextRule_skipsPoliciesWithoutScVal() async throws {
+    func addContextRule_skipsPoliciesWithoutSpec() async throws {
         let made = BuilderFixtures.makeFlow()
         made.manager.addResult = BuilderFixtures.successTx()
         let passkey = BuilderFixtures.passkeySigner()
         let threshold = try #require(knownPolicies.first { $0.type == "threshold" })
-        let stagedEmpty = FlowPolicyEntry(address: threshold.address, scVal: nil)
+        let stagedEmpty = FlowPolicyEntry(address: threshold.address, installSpec: nil)
         let stagedReal = FlowPolicyEntry(
             address: threshold.address,
-            scVal: PolicyScValBuilders.buildSimpleThresholdScVal(threshold: 1)
+            installSpec: .simpleThreshold(threshold: 1)
         )
         _ = try await made.flow.addContextRule(
             contextType: .defaultRule,

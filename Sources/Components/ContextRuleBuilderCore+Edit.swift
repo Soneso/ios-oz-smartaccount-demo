@@ -119,7 +119,11 @@ extension ContextRuleBuilderCore {
         let info = knownPolicies.first { $0.address == address }
         var originalParams: PolicyParams?
         if let info {
-            originalParams = await flow.readPolicyParams(info: info, ruleId: parsed.id)
+            originalParams = await flow.readPolicyParams(
+                info: info,
+                ruleId: parsed.id,
+                guardedToken: guardedTokenContract(for: parsed)
+            )
         }
         let label: String
         if let info {
@@ -131,7 +135,7 @@ extension ContextRuleBuilderCore {
             info: info,
             label: label,
             address: address,
-            scVal: nil,
+            installSpec: nil,
             onChainId: parsed.policyIds.indices.contains(index)
                 ? parsed.policyIds[index] : nil,
             isOriginal: true,
@@ -150,7 +154,7 @@ extension ContextRuleBuilderCore {
             ),
             label: entry.label,
             address: entry.address,
-            scVal: entry.scVal ?? .void
+            installSpec: entry.installSpec
         )
     }
 
@@ -237,7 +241,7 @@ extension ContextRuleBuilderCore {
                 ),
                 label: entry.label,
                 address: entry.address,
-                scVal: entry.scVal ?? .void
+                installSpec: entry.installSpec
             )
         }
     }

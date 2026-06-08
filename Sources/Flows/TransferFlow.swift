@@ -67,10 +67,15 @@ public struct TransferSignerInfo: Sendable, Identifiable {
 public protocol TransactionOperationsType: Sendable {
 
     /// Transfers tokens from the connected smart account to a recipient.
+    ///
+    /// `decimals` selects the amount scale: pass `nativeTokenDecimals` for native
+    /// XLM to skip the on-chain `decimals()` read, or `nil` to let the SDK fetch
+    /// the token's own decimals.
     func transfer(
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         forceMethod: OZSubmissionMethod?
     ) async throws -> OZTransactionResult
 }
@@ -92,12 +97,14 @@ public struct TransactionOperationsAdapter: TransactionOperationsType, Sendable 
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         forceMethod: OZSubmissionMethod?
     ) async throws -> OZTransactionResult {
         return try await inner.transfer(
             tokenContract: tokenContract,
             recipient: recipient,
             amount: amount,
+            decimals: decimals,
             forceMethod: forceMethod
         )
     }
@@ -117,6 +124,7 @@ public protocol MultiSignerManagerType: Sendable {
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         selectedSigners: [OZSelectedSigner],
         forceMethod: OZSubmissionMethod?,
         resolveContextRuleIds: OZResolveContextRuleIds?
@@ -141,6 +149,7 @@ public struct MultiSignerManagerAdapter: MultiSignerManagerType, Sendable {
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         selectedSigners: [OZSelectedSigner],
         forceMethod: OZSubmissionMethod?,
         resolveContextRuleIds: OZResolveContextRuleIds?
@@ -149,6 +158,7 @@ public struct MultiSignerManagerAdapter: MultiSignerManagerType, Sendable {
             tokenContract: tokenContract,
             recipient: recipient,
             amount: amount,
+            decimals: decimals,
             selectedSigners: selectedSigners,
             forceMethod: forceMethod,
             resolveContextRuleIds: resolveContextRuleIds
@@ -328,6 +338,7 @@ public final class TransferFlow {
             tokenContract: tokenContract,
             recipient: recipient,
             amount: amount,
+            decimals: transferDecimals(forTokenContract: tokenContract),
             forceMethod: nil
         )
 
@@ -463,6 +474,7 @@ public final class TransferFlow {
                     tokenContract: tokenContract,
                     recipient: recipient,
                     amount: amount,
+                    decimals: transferDecimals(forTokenContract: tokenContract),
                     selectedSigners: selectedSigners,
                     forceMethod: nil,
                     resolveContextRuleIds: nil
@@ -493,6 +505,19 @@ public final class TransferFlow {
             chosenSigners,
             connectedCredentialId: demoState.credentialId
         )
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - Private: decimals selection
+    // -------------------------------------------------------------------------
+
+    /// Resolves the amount scale to pass to the SDK transfer methods.
+    ///
+    /// Native XLM is fixed at `nativeTokenDecimals`, so the demo supplies it
+    /// directly to avoid an extra `decimals()` round trip. For any other token,
+    /// returns `nil` so the SDK fetches the token contract's own decimals.
+    private func transferDecimals(forTokenContract tokenContract: String) -> Int? {
+        tokenContract == DemoConfig.nativeTokenContract ? nativeTokenDecimals : nil
     }
 
     // -------------------------------------------------------------------------
@@ -555,6 +580,7 @@ struct NoOpTransactionOperations: TransactionOperationsType {
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         forceMethod: OZSubmissionMethod?
     ) async throws -> OZTransactionResult {
         throw SmartAccountWalletException.NotConnected(message: "No wallet connected.")
@@ -569,6 +595,7 @@ struct NoOpMultiSignerManager: MultiSignerManagerType {
         tokenContract: String,
         recipient: String,
         amount: String,
+        decimals: Int?,
         selectedSigners: [OZSelectedSigner],
         forceMethod: OZSubmissionMethod?,
         resolveContextRuleIds: OZResolveContextRuleIds?
