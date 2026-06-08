@@ -103,7 +103,7 @@ struct BuildSelectedSignersTransportsTests {
     func storedTransportsAreForwarded() async throws {
         let kit = try makeKit()
         let storedTransports = ["internal", "hybrid"]
-        _ = try await kit.credentialManagerConcrete.createPendingCredential(
+        _ = try await kit.credentialManager.createPendingCredential(
             credentialId: Self.credentialId,
             publicKey: dummyPublicKey,
             contractId: "CDUMMYCONTRACTADDRESS234567ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
@@ -113,7 +113,7 @@ struct BuildSelectedSignersTransportsTests {
         let signer = try makePasskeySigner()
         let result = try await MultiSignerRegistration.buildSelectedSigners(
             [signer],
-            credentialManager: kit.credentialManagerConcrete
+            credentialManager: kit.credentialManager
         )
 
         #expect(result.count == 1)
@@ -134,7 +134,7 @@ struct BuildSelectedSignersTransportsTests {
         let signer = try makePasskeySigner()
         let result = try await MultiSignerRegistration.buildSelectedSigners(
             [signer],
-            credentialManager: kit.credentialManagerConcrete
+            credentialManager: kit.credentialManager
         )
 
         #expect(result.count == 1)
@@ -150,7 +150,7 @@ struct BuildSelectedSignersTransportsTests {
     @MainActor
     func storedCredentialWithoutTransportsYieldsNil() async throws {
         let kit = try makeKit()
-        _ = try await kit.credentialManagerConcrete.createPendingCredential(
+        _ = try await kit.credentialManager.createPendingCredential(
             credentialId: Self.credentialId,
             publicKey: dummyPublicKey,
             contractId: "CDUMMYCONTRACTADDRESS234567ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
@@ -160,7 +160,7 @@ struct BuildSelectedSignersTransportsTests {
         let signer = try makePasskeySigner()
         let result = try await MultiSignerRegistration.buildSelectedSigners(
             [signer],
-            credentialManager: kit.credentialManagerConcrete
+            credentialManager: kit.credentialManager
         )
 
         #expect(result.count == 1)

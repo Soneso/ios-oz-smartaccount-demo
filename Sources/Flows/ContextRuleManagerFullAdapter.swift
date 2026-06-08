@@ -143,7 +143,7 @@ public struct ContextRuleManagerFullAdapter: ContextRuleManagerFullType, Sendabl
     /// Convenience initialiser that pulls the bare managers from a kit.
     public init(kit: OZSmartAccountKit) {
         self.init(
-            contextRuleManager: kit.contextRuleManagerConcrete,
+            contextRuleManager: kit.contextRuleManager,
             signerManager: kit.signerManager,
             policyManager: kit.policyManager
         )

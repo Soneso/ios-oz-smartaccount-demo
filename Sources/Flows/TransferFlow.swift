@@ -462,7 +462,7 @@ public final class TransferFlow {
             ) {
                 let selectedSigners = try await MultiSignerRegistration.buildSelectedSigners(
                     chosenSigners,
-                    credentialManager: demoState.kit?.credentialManagerConcrete
+                    credentialManager: demoState.kit?.credentialManager
                 )
                 logMultiSignerIntent(
                     amount: amount,

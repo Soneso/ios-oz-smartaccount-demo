@@ -100,7 +100,7 @@ public enum DemoFlowFactory {
         activityLog: ActivityLogState
     ) -> AccountSignersFlow {
         let manager: (any ContextRuleManagerType)? = demoState.kit.map {
-            ContextRuleManagerAdapter($0.contextRuleManagerConcrete)
+            ContextRuleManagerAdapter($0.contextRuleManager)
         }
         return AccountSignersFlow(
             demoState: demoState,
@@ -127,7 +127,7 @@ public enum DemoFlowFactory {
         if let kit = demoState.kit {
             contractOps = ContractCallOperationsAdapter(kit.transactionOperations)
             multiOps = MultiSignerContractCallAdapter(kit.multiSignerManager)
-            ctxManager = ContextRuleManagerAdapter(kit.contextRuleManagerConcrete)
+            ctxManager = ContextRuleManagerAdapter(kit.contextRuleManager)
             allowanceFetcher = SorobanAllowanceFetcher()
         } else {
             contractOps = NoOpContractCallOperations()
@@ -162,7 +162,7 @@ public enum DemoFlowFactory {
         if let kit = demoState.kit {
             txOps = TransactionOperationsAdapter(kit.transactionOperations)
             multiOps = MultiSignerManagerAdapter(kit.multiSignerManager)
-            ctxManager = ContextRuleManagerAdapter(kit.contextRuleManagerConcrete)
+            ctxManager = ContextRuleManagerAdapter(kit.contextRuleManager)
         } else {
             txOps = NoOpTransactionOperations()
             multiOps = NoOpMultiSignerManager()

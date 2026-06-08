@@ -410,7 +410,7 @@ public final class ContextRuleFlow {
         do {
             return try await MultiSignerRegistration.buildSelectedSigners(
                 selectedSigners,
-                credentialManager: demoState.kit?.credentialManagerConcrete,
+                credentialManager: demoState.kit?.credentialManager,
                 unsupportedShapePolicy: .throwError
             )
         } catch let MultiSignerRegistrationError.unsupportedSignerKind(description) {

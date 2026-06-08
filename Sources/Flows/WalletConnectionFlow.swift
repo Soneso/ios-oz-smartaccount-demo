@@ -131,16 +131,16 @@ public struct ConnectionOperationsAdapter: ConnectionOperationsType, Sendable {
     }
 
     public func getPendingCredentials() async throws -> [PendingCredentialInfo] {
-        let sdkCredentials = try await kit.credentialManagerConcrete.getPendingCredentials()
+        let sdkCredentials = try await kit.credentialManager.getPendingCredentials()
         return sdkCredentials.asPendingInfo()
     }
 
     public func deleteCredential(credentialId: String) async throws {
-        try await kit.credentialManagerConcrete.deleteCredential(credentialId: credentialId)
+        try await kit.credentialManager.deleteCredential(credentialId: credentialId)
     }
 
     public func getContextRulesCount() async throws -> UInt32 {
-        try await kit.contextRuleManagerConcrete.getContextRulesCount()
+        try await kit.contextRuleManager.getContextRulesCount()
     }
 }
 

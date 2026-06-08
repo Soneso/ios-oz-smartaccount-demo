@@ -247,7 +247,7 @@ extension ContextRuleFlow {
         do {
             built = try await MultiSignerRegistration.buildSelectedSigners(
                 selectedSigners,
-                credentialManager: demoState.kit?.credentialManagerConcrete,
+                credentialManager: demoState.kit?.credentialManager,
                 unsupportedShapePolicy: .throwError
             )
         } catch let MultiSignerRegistrationError.unsupportedSignerKind(description) {

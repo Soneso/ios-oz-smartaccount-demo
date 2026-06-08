@@ -404,7 +404,7 @@ public final class ApproveFlow {
             ) {
                 let built = try await MultiSignerRegistration.buildSelectedSigners(
                     chosenSigners,
-                    credentialManager: demoState.kit?.credentialManagerConcrete
+                    credentialManager: demoState.kit?.credentialManager
                 )
                 return try await multiSignerOperations.multiSignerContractCall(
                     target: tokenContract,
