@@ -7,7 +7,7 @@
 #                            `gh api repos/reown-com/reown-swift/releases/latest`)
 #   SwiftLint:      0.63.2  (verified via
 #                            `gh api repos/realm/SwiftLint/releases/latest`)
-#   stellar-ios-mac-sdk: local path ../stellar-ios-mac-sdk on branch feature/oz-smart-account
+#   stellar-ios-mac-sdk: 3.5.0 (released; https://github.com/Soneso/stellar-ios-mac-sdk)
 
 name: SmartAccountDemo
 options:
@@ -37,7 +37,8 @@ configFiles:
 # ============================================================================
 packages:
   stellarsdk:
-    path: ../stellar-ios-mac-sdk
+    url: https://github.com/Soneso/stellar-ios-mac-sdk.git
+    from: 3.5.0
   reown-swift:
     url: https://github.com/reown-com/reown-swift
     # 2.2.9 — latest stable verified 2026-05-16

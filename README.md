@@ -72,6 +72,7 @@ The iOS shell links the Reown SDK for external wallet pairing; the macOS shell d
 - Swift 6.0 with `SWIFT_STRICT_CONCURRENCY: complete`
 - xcodegen 2.44+ (`brew install xcodegen`)
 - SwiftLint 0.63.2+ (`brew install swiftlint`)
+- stellar-ios-mac-sdk `3.5.0+` (resolved by Xcode on first package fetch from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
 - Reown-swift `2.2.9` (pinned, resolved by Xcode on first package fetch)
 - Passkey (WebAuthn) features require the Associated Domains configuration in [PASSKEY_SETUP.md](PASSKEY_SETUP.md). The demo is preconfigured for `soneso.com` (works on the iOS Simulator as-is); macOS additionally needs a one-time `swcutil developer-mode -e true`.
 
