@@ -42,7 +42,7 @@ struct MainScreenFlowTests {
 
     /// Builds a `DemoState` with the real platform providers injected.
     ///
-    /// Uses `InMemoryStorageAdapter` so tests do not write to the Keychain and
+    /// Uses `OZInMemoryStorageAdapter` so tests do not write to the Keychain and
     /// a real `AppleWebAuthnProvider`. Throws when the Associated Domains
     /// entitlement is unavailable in the test host, which is expected and
     /// acceptable — tests that require a provider handle the skip at the call site.
@@ -63,7 +63,7 @@ struct MainScreenFlowTests {
                 // For the happy-path test, we skip if the provider cannot be built.
                 throw error
             }
-            state.setStorage(InMemoryStorageAdapter())
+            state.setStorage(OZInMemoryStorageAdapter())
         }
         return state
     }
@@ -78,7 +78,7 @@ struct MainScreenFlowTests {
         // Arrange: DemoState with no provider injected.
         let state = DemoState()
         // Storage present, WebAuthn provider absent.
-        state.setStorage(InMemoryStorageAdapter())
+        state.setStorage(OZInMemoryStorageAdapter())
 
         let log = ActivityLogState()
         let flow = MainScreenFlow(demoState: state, activityLog: log)
@@ -129,7 +129,7 @@ struct MainScreenFlowTests {
     func kitInitIsIdempotent() async throws {
         // Arrange: pre-populate DemoState with a kit so the guard fires immediately.
         let state = DemoState()
-        state.setStorage(InMemoryStorageAdapter())
+        state.setStorage(OZInMemoryStorageAdapter())
 
         // Build a minimal kit directly and inject it.
         let config = try OZSmartAccountConfig(
@@ -137,7 +137,7 @@ struct MainScreenFlowTests {
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            storage: InMemoryStorageAdapter()
+            storage: OZInMemoryStorageAdapter()
         )
         let existingKit = OZSmartAccountKit.create(config: config)
         state.setKit(existingKit)
@@ -165,13 +165,13 @@ struct MainScreenFlowTests {
     func disconnectClearsStateAndLogs() async throws {
         // Arrange: build a kit and connect a fake wallet state.
         let state = DemoState()
-        state.setStorage(InMemoryStorageAdapter())
+        state.setStorage(OZInMemoryStorageAdapter())
         let config = try OZSmartAccountConfig(
             rpcUrl: DemoConfig.rpcURL,
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            storage: InMemoryStorageAdapter()
+            storage: OZInMemoryStorageAdapter()
         )
         let kit = OZSmartAccountKit.create(config: config)
         state.setKit(kit)
@@ -237,27 +237,32 @@ struct MainScreenFlowTests {
         #expect(log.entries.count == countBefore, "refreshBalances should not log when disconnected")
     }
 
-    @Test("refreshBalances exits early when kit is nil but connected state is set")
+    @Test("refreshBalances proceeds on connection state alone, independent of the kit")
     @MainActor
-    func refreshBalancesExitsWhenKitIsNil() async {
-        // Arrange: connected state without a kit (abnormal but defensive).
+    func refreshBalancesRunsWithoutKit() async {
+        // Arrange: connected state without a kit. Balance fetching goes straight
+        // to the Soroban RPC via SACBalanceFetcher and does not depend on the
+        // kit, so the only gate is the connection guard (isConnected + contractId).
         let state = DemoState()
         state.setConnected(
             contractId: "CDUMMYCONTRACTADDRESS123456789012345678901234567890ABCDEF",
             credentialId: "cred",
             isDeployed: true
         )
-        // Kit is deliberately left nil.
+        // Kit is deliberately left nil; refreshBalances must still proceed.
 
         let log = ActivityLogState()
         let flow = MainScreenFlow(demoState: state, activityLog: log)
 
-        let countBefore = log.entries.count
-
         await flow.refreshBalances()
 
-        // No entries added beyond the early-exit guard.
-        #expect(log.entries.count == countBefore)
+        // The connection guard passes, so the method runs to completion: it logs
+        // the start marker (proving it did not early-exit) and the completion
+        // marker, regardless of whether the network balance fetch succeeds.
+        #expect(log.entries.contains { $0.message.contains("Refreshing balances") },
+                "refreshBalances should log its start marker when connected")
+        #expect(log.entries.contains { $0.message.contains("Balances refreshed") },
+                "refreshBalances should run to completion when connected")
     }
 
     // -------------------------------------------------------------------------

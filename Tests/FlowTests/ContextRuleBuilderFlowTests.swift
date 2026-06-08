@@ -116,7 +116,7 @@ struct LoadAvailablePasskeySignersTests {
         let other = BuilderFixtures.passkeySigner(credId: "passkeyOther")
         let otherDuplicate = BuilderFixtures.passkeySigner(credId: "passkeyOther")
         made.manager.listResult = [
-            ParsedContextRule(
+            OZParsedContextRule(
                 id: 1,
                 contextType: .defaultRule,
                 name: "r1",
@@ -126,7 +126,7 @@ struct LoadAvailablePasskeySignersTests {
                 policyIds: [],
                 validUntil: nil
             ),
-            ParsedContextRule(
+            OZParsedContextRule(
                 id: 2,
                 contextType: .defaultRule,
                 name: "r2",
@@ -176,7 +176,7 @@ struct LoadAvailablePasskeySignersTests {
             publicKey: Data(repeating: 1, count: 32)
         )
         made.manager.listResult = [
-            ParsedContextRule(
+            OZParsedContextRule(
                 id: 1,
                 contextType: .defaultRule,
                 name: "r",
@@ -269,7 +269,7 @@ struct AddContextRuleTests {
         #expect(made.manager.lastAddPolicies[threshold.address] != nil)
     }
 
-    @Test("Multi-signer path registers delegated keypairs and forwards SelectedSigner list")
+    @Test("Multi-signer path registers delegated keypairs and forwards OZSelectedSigner list")
     @MainActor
     func addContextRule_multiSigner_registersKeypairs() async throws {
         let made = BuilderFixtures.makeFlow()
@@ -302,13 +302,13 @@ struct AddContextRuleTests {
         #expect(await made.signers.getAll().isEmpty)
     }
 
-    @Test("Throws WalletException.NotConnected when not connected")
+    @Test("Throws SmartAccountWalletException.NotConnected when not connected")
     @MainActor
     func addContextRule_notConnected_throws() async throws {
         let st = ContextRuleFixtures.disconnectedState()
         let made = BuilderFixtures.makeFlow(state: st)
         let passkey = BuilderFixtures.passkeySigner()
-        await #expect(throws: WalletException.NotConnected.self) {
+        await #expect(throws: SmartAccountWalletException.NotConnected.self) {
             _ = try await made.flow.addContextRule(
                 contextType: .defaultRule,
                 name: "X",

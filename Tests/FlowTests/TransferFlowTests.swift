@@ -145,7 +145,7 @@ struct TransferFlowSelfTransferTests {
     @MainActor
     func selfTransferRejected() async throws {
         let txOps = MockTransactionOperations()
-        txOps.error = ValidationException.invalidInput(field: "recipient", reason: "Cannot transfer to self")
+        txOps.error = SmartAccountValidationException.invalidInput(field: "recipient", reason: "Cannot transfer to self")
         let state = TransferFixtures.connectedState()
         let ctx = TransferFixtures.makeFlow(txOps: txOps, state: state)
 
@@ -585,11 +585,11 @@ struct TransferFlowTokenTests {
 @Suite("TransferFlow: Disconnected State")
 struct TransferFlowDisconnectedTests {
 
-    @Test("Disconnected state — SDK call propagates WalletException")
+    @Test("Disconnected state — SDK call propagates SmartAccountWalletException")
     @MainActor
     func disconnectedStateProducesError() async throws {
         let txOps = MockTransactionOperations()
-        txOps.error = WalletException.NotConnected(message: "No wallet connected.")
+        txOps.error = SmartAccountWalletException.NotConnected(message: "No wallet connected.")
         let state = DemoState()
         let log = ActivityLogState()
         let flow = TransferFlow(

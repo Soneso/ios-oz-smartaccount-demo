@@ -44,7 +44,7 @@ struct MainScreenDeployPendingTests {
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            storage: InMemoryStorageAdapter()
+            storage: OZInMemoryStorageAdapter()
         )
         return OZSmartAccountKit.create(config: config)
     }
@@ -454,7 +454,7 @@ struct DeployPendingFailurePathTests {
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            storage: InMemoryStorageAdapter()
+            storage: OZInMemoryStorageAdapter()
         )
         let kit = OZSmartAccountKit.create(config: config)
         state.setKit(kit)

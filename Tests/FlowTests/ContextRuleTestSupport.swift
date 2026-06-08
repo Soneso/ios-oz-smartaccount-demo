@@ -22,33 +22,33 @@ import stellarsdk
 final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked Sendable {
 
     // List
-    var listResult: [ParsedContextRule] = []
+    var listResult: [OZParsedContextRule] = []
     var listError: Error?
     private(set) var listCallCount: Int = 0
 
     // Remove
-    var removeResult: TransactionResult?
+    var removeResult: OZTransactionResult?
     var removeError: Error?
     private(set) var removeCallCount: Int = 0
     private(set) var lastRemovedRuleId: UInt32?
-    private(set) var lastRemoveSelectedSigners: [SelectedSigner] = []
+    private(set) var lastRemoveSelectedSigners: [OZSelectedSigner] = []
 
     // Count
     var countResult: UInt32 = 0
     var countError: Error?
 
     // Add
-    var addResult: TransactionResult?
+    var addResult: OZTransactionResult?
     var addError: Error?
     private(set) var addCallCount: Int = 0
-    private(set) var lastAddContextType: ContextRuleType?
+    private(set) var lastAddContextType: OZContextRuleType?
     private(set) var lastAddName: String?
     private(set) var lastAddValidUntil: UInt32?
     private(set) var lastAddSigners: [any OZSmartAccountSigner] = []
     private(set) var lastAddPolicies: [String: SCValXDR] = [:]
-    private(set) var lastAddSelectedSigners: [SelectedSigner] = []
+    private(set) var lastAddSelectedSigners: [OZSelectedSigner] = []
 
-    func listContextRules() async throws -> [ParsedContextRule] {
+    func listContextRules() async throws -> [OZParsedContextRule] {
         listCallCount += 1
         if let error = listError { throw error }
         return listResult
@@ -56,8 +56,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
 
     func removeContextRule(
         ruleId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         removeCallCount += 1
         lastRemovedRuleId = ruleId
         lastRemoveSelectedSigners = selectedSigners
@@ -75,13 +75,13 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
 
     // swiftlint:disable function_parameter_count
     func addContextRule(
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         name: String,
         validUntil: UInt32?,
         signers: [any OZSmartAccountSigner],
         policies: [String: SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         addCallCount += 1
         lastAddContextType = contextType
         lastAddName = name
@@ -118,21 +118,21 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
 
     /// Per-method canned outcomes. Test sets one of these to control a step.
     /// When `nil`, the mock returns a generic success result.
-    var updateNameResult: TransactionResult?
+    var updateNameResult: OZTransactionResult?
     var updateNameError: Error?
-    var updateValidUntilResult: TransactionResult?
+    var updateValidUntilResult: OZTransactionResult?
     var updateValidUntilError: Error?
-    var addDelegatedResult: TransactionResult?
+    var addDelegatedResult: OZTransactionResult?
     var addDelegatedError: Error?
-    var addEd25519Result: TransactionResult?
+    var addEd25519Result: OZTransactionResult?
     var addEd25519Error: Error?
-    var addPasskeyResult: TransactionResult?
+    var addPasskeyResult: OZTransactionResult?
     var addPasskeyError: Error?
-    var removeSignerResult: TransactionResult?
+    var removeSignerResult: OZTransactionResult?
     var removeSignerError: Error?
-    var addPolicyResult: TransactionResult?
+    var addPolicyResult: OZTransactionResult?
     var addPolicyError: Error?
-    var removePolicyResult: TransactionResult?
+    var removePolicyResult: OZTransactionResult?
     var removePolicyError: Error?
     var contextRuleRawResult: SCValXDR?
     var contextRuleRawError: Error?
@@ -140,15 +140,15 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
     /// Recorded call ledger (in execution order). Tests assert against this.
     private(set) var editCalls: [EditCall] = []
 
-    private static func defaultEditSuccess(_ name: String) -> TransactionResult {
-        TransactionResult(success: true, hash: "edit-\(name)-hash", error: nil)
+    private static func defaultEditSuccess(_ name: String) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: "edit-\(name)-hash", error: nil)
     }
 
     func updateContextRuleName(
         ruleId: UInt32,
         newName: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.updateName(ruleId: ruleId, newName: newName))
         if let error = updateNameError { throw error }
         return updateNameResult ?? Self.defaultEditSuccess("name")
@@ -157,8 +157,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
     func updateContextRuleValidUntil(
         ruleId: UInt32,
         newValidUntil: UInt32?,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.updateValidUntil(ruleId: ruleId, newValidUntil: newValidUntil))
         if let error = updateValidUntilError { throw error }
         return updateValidUntilResult ?? Self.defaultEditSuccess("validUntil")
@@ -167,8 +167,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
     func addDelegatedSignerToRule(
         ruleId: UInt32,
         address: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.addDelegated(ruleId: ruleId, address: address))
         if let error = addDelegatedError { throw error }
         return addDelegatedResult ?? Self.defaultEditSuccess("addDelegated")
@@ -178,8 +178,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
         ruleId: UInt32,
         verifierAddress: String,
         publicKey: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(
             .addEd25519(ruleId: ruleId, verifier: verifierAddress, pubKey: publicKey)
         )
@@ -191,8 +191,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
         ruleId: UInt32,
         publicKey: Data,
         credentialId: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(
             .addPasskey(ruleId: ruleId, pubKey: publicKey, credentialId: credentialId)
         )
@@ -203,8 +203,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
     func removeSignerFromRule(
         ruleId: UInt32,
         signerId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.removeSigner(ruleId: ruleId, signerId: signerId))
         if let error = removeSignerError { throw error }
         return removeSignerResult ?? Self.defaultEditSuccess("removeSigner")
@@ -214,8 +214,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
         ruleId: UInt32,
         policyAddress: String,
         installParams: SCValXDR,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.addPolicy(ruleId: ruleId, address: policyAddress))
         if let error = addPolicyError { throw error }
         return addPolicyResult ?? Self.defaultEditSuccess("addPolicy")
@@ -224,8 +224,8 @@ final class MockContextRuleManagerFull: ContextRuleManagerFullType, @unchecked S
     func removePolicyFromRule(
         ruleId: UInt32,
         policyId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         editCalls.append(.removePolicy(ruleId: ruleId, policyId: policyId))
         if let error = removePolicyError { throw error }
         return removePolicyResult ?? Self.defaultEditSuccess("removePolicy")
@@ -258,15 +258,15 @@ enum ContextRuleFixtures {
     static let verifier = "CAZJ3UVRY3R3S5C5BH32GMYBRSN23N75ZEEXEOLXOUUAHDFIMVP4AXUC"
     static let delegatedAddress = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
 
-    // MARK: - ParsedContextRule builders
+    // MARK: - OZParsedContextRule builders
 
     /// Builds a default-type rule with one passkey signer and one delegated signer.
     static func defaultRule(
         id: UInt32 = 1,
         name: String = "default",
         validUntil: UInt32? = nil
-    ) -> ParsedContextRule {
-        ParsedContextRule(
+    ) -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: .defaultRule,
             name: name,
@@ -283,8 +283,8 @@ enum ContextRuleFixtures {
         id: UInt32 = 2,
         name: String = "token-rule",
         contractAddress: String = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
-    ) -> ParsedContextRule {
-        ParsedContextRule(
+    ) -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: .callContract(contractAddress: contractAddress),
             name: name,
@@ -297,8 +297,8 @@ enum ContextRuleFixtures {
     }
 
     /// Builds a rule with no signers and no policies.
-    static func emptyRule(id: UInt32 = 3, name: String = "empty") -> ParsedContextRule {
-        ParsedContextRule(
+    static func emptyRule(id: UInt32 = 3, name: String = "empty") -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: .defaultRule,
             name: name,
@@ -311,8 +311,8 @@ enum ContextRuleFixtures {
     }
 
     /// Builds a rule with an empty name (exercises the "Unnamed Rule" fallback).
-    static func unnamedRule(id: UInt32 = 4) -> ParsedContextRule {
-        ParsedContextRule(
+    static func unnamedRule(id: UInt32 = 4) -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: .defaultRule,
             name: "",
@@ -329,8 +329,8 @@ enum ContextRuleFixtures {
     /// shape the production UI rarely renders), an empty name, no signers,
     /// and no policies. Used by the parser-fallback test to verify the flow
     /// preserves and returns the unparsed shape without throwing.
-    static func fallbackRule(id: UInt32 = 99) -> ParsedContextRule {
-        ParsedContextRule(
+    static func fallbackRule(id: UInt32 = 99) -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: .createContract(wasmHash: Data(repeating: 0xFF, count: 32)),
             name: "",
@@ -381,14 +381,14 @@ enum ContextRuleFixtures {
         TransferSignerInfo(signer: makeDelegatedSigner(address: address), canSign: canSign)
     }
 
-    // MARK: - TransactionResult
+    // MARK: - OZTransactionResult
 
-    static func successResult(hash: String = txHash) -> TransactionResult {
-        TransactionResult(success: true, hash: hash, error: nil)
+    static func successResult(hash: String = txHash) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: hash, error: nil)
     }
 
-    static func failedResult(error: String = "Insufficient fee") -> TransactionResult {
-        TransactionResult(success: false, hash: nil, error: error)
+    static func failedResult(error: String = "Insufficient fee") -> OZTransactionResult {
+        OZTransactionResult(success: false, hash: nil, error: error)
     }
 
     // MARK: - DemoState

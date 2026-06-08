@@ -22,7 +22,7 @@ import Testing
 /// `last*` records.
 final class MockContractCallOperations: ContractCallOperationsType, @unchecked Sendable {
 
-    var result: TransactionResult?
+    var result: OZTransactionResult?
     var error: Error?
     private(set) var callCount: Int = 0
     private(set) var lastTarget: String?
@@ -33,7 +33,7 @@ final class MockContractCallOperations: ContractCallOperationsType, @unchecked S
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         callCount += 1
         lastTarget = target
         lastTargetFn = targetFn
@@ -53,7 +53,7 @@ final class MockContractCallOperations: ContractCallOperationsType, @unchecked S
 /// Configurable mock for `MultiSignerContractCallType`.
 final class MockMultiSignerContractCall: MultiSignerContractCallType, @unchecked Sendable {
 
-    var result: TransactionResult?
+    var result: OZTransactionResult?
     var error: Error?
     /// Optional hook invoked (awaited) at the moment the SDK call runs, before
     /// returning `result` / throwing `error`. Lets tests capture the live
@@ -64,14 +64,14 @@ final class MockMultiSignerContractCall: MultiSignerContractCallType, @unchecked
     private(set) var lastTarget: String?
     private(set) var lastTargetFn: String?
     private(set) var lastTargetArgs: [SCValXDR] = []
-    private(set) var lastSelectedSigners: [SelectedSigner] = []
+    private(set) var lastSelectedSigners: [OZSelectedSigner] = []
 
     func multiSignerContractCall(
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         callCount += 1
         lastTarget = target
         lastTargetFn = targetFn
@@ -172,12 +172,12 @@ enum ApproveFixtures {
         )
     }
 
-    static func successResult(hash: String = txHash) -> TransactionResult {
-        TransactionResult(success: true, hash: hash, error: nil)
+    static func successResult(hash: String = txHash) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: hash, error: nil)
     }
 
-    static func failedResult(error: String = "Insufficient balance") -> TransactionResult {
-        TransactionResult(success: false, hash: nil, error: error)
+    static func failedResult(error: String = "Insufficient balance") -> OZTransactionResult {
+        OZTransactionResult(success: false, hash: nil, error: error)
     }
 }
 
@@ -230,7 +230,7 @@ enum ApproveArgAssertions {
         } else {
             Issue.record("Expected second arg to be Address.")
         }
-        // [2] amount — i128 with hi=0, lo matching the expected stroops.
+        // [2] amount — i128 with hi=0, lo matching the expected base units.
         if case .i128(let parts) = args[2] {
             #expect(parts.hi == 0)
             #expect(parts.lo == expectedAmountLo)

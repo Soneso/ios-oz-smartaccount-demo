@@ -74,7 +74,7 @@ struct ExternalSignerManagerAdapterTests {
         // Act: sign via wallet path (no keypair registered for this address).
         let result = try await adapter.signAuthEntry(
             preimageXdr: preimageBase64,
-            options: SignAuthEntryOptions(address: signerAddress)
+            options: OZSignAuthEntryOptions(address: signerAddress)
         )
 
         // Assert: connector was called and the result is threaded through.
@@ -104,7 +104,7 @@ struct ExternalSignerManagerAdapterTests {
         do {
             _ = try await adapter.signAuthEntry(
                 preimageXdr: makeTestPreimageBase64(),
-                options: SignAuthEntryOptions(address: signerAddress)
+                options: OZSignAuthEntryOptions(address: signerAddress)
             )
             Issue.record("Expected connector rejection to be thrown")
         } catch let error as WalletConnectorError {
@@ -136,7 +136,7 @@ struct ExternalSignerManagerAdapterTests {
         do {
             _ = try await adapter.signAuthEntry(
                 preimageXdr: makeTestPreimageBase64(),
-                options: SignAuthEntryOptions(address: "GUNKNOWNADDRESS")
+                options: OZSignAuthEntryOptions(address: "GUNKNOWNADDRESS")
             )
             Issue.record("Expected signerNotFound to be thrown")
         } catch let error as AdapterError {

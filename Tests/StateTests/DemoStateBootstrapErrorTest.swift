@@ -28,7 +28,7 @@ struct DemoStateBootstrapErrorTest {
     @MainActor
     func kitInitLogsErrorWhenProviderMissing() async {
         let state = DemoState()
-        state.setStorage(InMemoryStorageAdapter())
+        state.setStorage(OZInMemoryStorageAdapter())
         // WebAuthn provider deliberately absent.
 
         let log = ActivityLogState()
@@ -60,7 +60,7 @@ struct DemoStateBootstrapErrorTest {
     @MainActor
     func kitInitDoesNotSetKitOnFailure() async {
         let state = DemoState()
-        state.setStorage(InMemoryStorageAdapter())
+        state.setStorage(OZInMemoryStorageAdapter())
 
         let log = ActivityLogState()
         let flow = MainScreenFlow(demoState: state, activityLog: log)

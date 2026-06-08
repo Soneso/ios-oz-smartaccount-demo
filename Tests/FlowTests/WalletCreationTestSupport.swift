@@ -21,7 +21,7 @@ import stellarsdk
 /// it was called with so tests can assert on them.
 final class MockWalletOperations: WalletOperationsType, @unchecked Sendable {
 
-    var result: CreateWalletResult?
+    var result: OZCreateWalletResult?
     var error: Error?
     private(set) var lastUserName: String?
     private(set) var lastAutoSubmit: Bool?
@@ -34,7 +34,7 @@ final class MockWalletOperations: WalletOperationsType, @unchecked Sendable {
         autoSubmit: Bool,
         autoFund: Bool,
         nativeTokenContract: String?
-    ) async throws -> CreateWalletResult {
+    ) async throws -> OZCreateWalletResult {
         callCount += 1
         lastUserName = userName
         lastAutoSubmit = autoSubmit
@@ -82,7 +82,7 @@ final class MockDemoTokenService: DemoTokenServiceType, @unchecked Sendable {
 /// without waiting for the slow mock to complete.
 final class MockSlowWalletOperations: WalletOperationsType, @unchecked Sendable {
 
-    var result: CreateWalletResult?
+    var result: OZCreateWalletResult?
     var error: Error?
     private let delay: TimeInterval
 
@@ -95,7 +95,7 @@ final class MockSlowWalletOperations: WalletOperationsType, @unchecked Sendable 
         autoSubmit: Bool,
         autoFund: Bool,
         nativeTokenContract: String?
-    ) async throws -> CreateWalletResult {
+    ) async throws -> OZCreateWalletResult {
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         if let error { throw error }
         guard let result else {
@@ -136,13 +136,13 @@ enum WalletCreationFixtures {
         return key
     }
 
-    /// Returns a `CreateWalletResult` with a valid secp256r1 public key.
+    /// Returns a `OZCreateWalletResult` with a valid secp256r1 public key.
     static func validSdkResult(
         contractId: String = defaultContractId,
         credentialId: String = defaultCredentialId,
         deployed: Bool = true
-    ) -> CreateWalletResult {
-        CreateWalletResult(
+    ) -> OZCreateWalletResult {
+        OZCreateWalletResult(
             credentialId: credentialId,
             contractId: contractId,
             publicKey: validPublicKey,
@@ -151,9 +151,9 @@ enum WalletCreationFixtures {
         )
     }
 
-    /// Returns a `CreateWalletResult` whose 32-byte key fails the secp256r1 check.
-    static func invalidKeyResult() -> CreateWalletResult {
-        CreateWalletResult(
+    /// Returns a `OZCreateWalletResult` whose 32-byte key fails the secp256r1 check.
+    static func invalidKeyResult() -> OZCreateWalletResult {
+        OZCreateWalletResult(
             credentialId: defaultCredentialId,
             contractId: defaultContractId,
             publicKey: Data(count: 32),
@@ -162,11 +162,11 @@ enum WalletCreationFixtures {
         )
     }
 
-    /// Returns a `CreateWalletResult` with a 65-byte key starting with 0x02.
-    static func wrongPrefixKeyResult() -> CreateWalletResult {
+    /// Returns a `OZCreateWalletResult` with a 65-byte key starting with 0x02.
+    static func wrongPrefixKeyResult() -> OZCreateWalletResult {
         var badKey = Data(count: 65)
         badKey[0] = 0x02
-        return CreateWalletResult(
+        return OZCreateWalletResult(
             credentialId: defaultCredentialId,
             contractId: defaultContractId,
             publicKey: badKey,

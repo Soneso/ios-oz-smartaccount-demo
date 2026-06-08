@@ -108,7 +108,7 @@ struct AccountSignersFlowHappyPathTests {
     func pluralizesSingular_correctly() async throws {
         let ruleId: UInt32 = 42
         let signer = ContextRuleFixtures.makePasskeySigner()
-        let rule = ParsedContextRule(
+        let rule = OZParsedContextRule(
             id: ruleId,
             contextType: .defaultRule,
             name: "single",
@@ -141,7 +141,7 @@ struct AccountSignersFlowHappyPathTests {
 @Suite("AccountSignersFlow: Failure / Edge")
 struct AccountSignersFlowEdgeTests {
 
-    @Test("Throws WalletException.NotConnected when wallet not connected")
+    @Test("Throws SmartAccountWalletException.NotConnected when wallet not connected")
     @MainActor
     func notConnected_throws() async {
         let state = DemoState()
@@ -189,7 +189,7 @@ struct AccountSignersFlowEdgeTests {
     @Test("Returns empty array when rules exist but contain no signers")
     @MainActor
     func rulesWithoutSigners_returnsEmpty() async throws {
-        let emptyRule = ParsedContextRule(
+        let emptyRule = OZParsedContextRule(
             id: 1,
             contextType: .defaultRule,
             name: "empty",
@@ -240,14 +240,14 @@ struct SignerEntryTests {
 @MainActor
 enum AccountSignerFixtures {
 
-    /// Builds a `ParsedContextRule` with positional signer ids.
+    /// Builds a `OZParsedContextRule` with positional signer ids.
     static func rule(
         id: UInt32,
         name: String,
         signers: [any OZSmartAccountSigner],
-        contextType: ContextRuleType = .defaultRule
-    ) -> ParsedContextRule {
-        ParsedContextRule(
+        contextType: OZContextRuleType = .defaultRule
+    ) -> OZParsedContextRule {
+        OZParsedContextRule(
             id: id,
             contextType: contextType,
             name: name,
@@ -261,7 +261,7 @@ enum AccountSignerFixtures {
 
     /// Builds an `AccountSignersFlow` bound to a connected state and a mock
     /// context-rule manager configured to return `rules`.
-    static func makeFlow(rules: [ParsedContextRule]) -> AccountSignersFlow {
+    static func makeFlow(rules: [OZParsedContextRule]) -> AccountSignersFlow {
         let manager = MockContextRuleManager()
         manager.result = rules
         return AccountSignersFlow(

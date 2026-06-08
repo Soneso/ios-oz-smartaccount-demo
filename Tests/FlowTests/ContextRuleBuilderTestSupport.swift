@@ -57,7 +57,7 @@ final class MockWebAuthnProvider: WebAuthnProvider, @unchecked Sendable {
 
     func authenticate(
         challenge: Data,
-        allowCredentials: [AllowCredential]?
+        allowCredentials: [WebAuthnAllowCredential]?
     ) async throws -> WebAuthnAuthenticationResult {
         throw WebAuthnException.NotSupported(
             message: "Authenticate not used in builder tests"
@@ -90,26 +90,26 @@ final class MockWebAuthnProvider: WebAuthnProvider, @unchecked Sendable {
 /// the SDK is called with the expected arguments.
 final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecked Sendable {
 
-    var listResult: [ParsedContextRule] = []
+    var listResult: [OZParsedContextRule] = []
     var listError: Error?
     private(set) var listCallCount: Int = 0
 
-    var removeResult: TransactionResult?
+    var removeResult: OZTransactionResult?
     var removeError: Error?
     private(set) var removeCallCount: Int = 0
 
     var countResult: UInt32 = 0
     var countError: Error?
 
-    var addResult: TransactionResult?
+    var addResult: OZTransactionResult?
     var addError: Error?
     private(set) var addCallCount: Int = 0
-    private(set) var lastAddContextType: ContextRuleType?
+    private(set) var lastAddContextType: OZContextRuleType?
     private(set) var lastAddName: String?
     private(set) var lastAddValidUntil: UInt32?
     private(set) var lastAddSigners: [any OZSmartAccountSigner] = []
     private(set) var lastAddPolicies: [String: SCValXDR] = [:]
-    private(set) var lastAddSelectedSigners: [SelectedSigner] = []
+    private(set) var lastAddSelectedSigners: [OZSelectedSigner] = []
 
     /// Optional hook invoked (awaited) at the moment `addContextRule` runs, used
     /// to capture whether a delegated keypair is registered on the real manager
@@ -121,7 +121,7 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
     /// `addContextRule` invocation.
     private(set) var lastCanSignDuringAdd: Bool?
 
-    func listContextRules() async throws -> [ParsedContextRule] {
+    func listContextRules() async throws -> [OZParsedContextRule] {
         listCallCount += 1
         if let listError { throw listError }
         return listResult
@@ -129,8 +129,8 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
 
     func removeContextRule(
         ruleId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         removeCallCount += 1
         if let removeError { throw removeError }
         guard let removeResult else {
@@ -146,13 +146,13 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
 
     // swiftlint:disable function_parameter_count
     func addContextRule(
-        contextType: ContextRuleType,
+        contextType: OZContextRuleType,
         name: String,
         validUntil: UInt32?,
         signers: [any OZSmartAccountSigner],
         policies: [String: SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         addCallCount += 1
         lastAddContextType = contextType
         lastAddName = name
@@ -174,31 +174,31 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
     // Stub edit-mode protocol methods — these mocks are reused only by the
     // 7b-create tests, which never exercise the edit dispatch path. Returning
     // a generic success keeps them satisfied for the compiler.
-    private static func successTx(_ tag: String) -> TransactionResult {
-        TransactionResult(success: true, hash: "addmock-\(tag)", error: nil)
+    private static func successTx(_ tag: String) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: "addmock-\(tag)", error: nil)
     }
 
     func updateContextRuleName(
         ruleId: UInt32,
         newName: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("updateName")
     }
 
     func updateContextRuleValidUntil(
         ruleId: UInt32,
         newValidUntil: UInt32?,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("updateValidUntil")
     }
 
     func addDelegatedSignerToRule(
         ruleId: UInt32,
         address: String,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("addDelegated")
     }
 
@@ -206,8 +206,8 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
         ruleId: UInt32,
         verifierAddress: String,
         publicKey: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("addEd25519")
     }
 
@@ -215,16 +215,16 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
         ruleId: UInt32,
         publicKey: Data,
         credentialId: Data,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("addPasskey")
     }
 
     func removeSignerFromRule(
         ruleId: UInt32,
         signerId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("removeSigner")
     }
 
@@ -232,16 +232,16 @@ final class MockContextRuleManagerWithAdd: ContextRuleManagerFullType, @unchecke
         ruleId: UInt32,
         policyAddress: String,
         installParams: SCValXDR,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("addPolicy")
     }
 
     func removePolicyFromRule(
         ruleId: UInt32,
         policyId: UInt32,
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         return Self.successTx("removePolicy")
     }
 
@@ -313,12 +313,12 @@ enum BuilderFixtures {
         return try! OZExternalSigner(verifierAddress: verifier, keyData: keyData)
     }
 
-    static func successTx(hash: String = ContextRuleFixtures.txHash) -> TransactionResult {
-        TransactionResult(success: true, hash: hash, error: nil)
+    static func successTx(hash: String = ContextRuleFixtures.txHash) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: hash, error: nil)
     }
 
-    static func failedTx(error: String = "submit failed") -> TransactionResult {
-        TransactionResult(success: false, hash: nil, error: error)
+    static func failedTx(error: String = "submit failed") -> OZTransactionResult {
+        OZTransactionResult(success: false, hash: nil, error: error)
     }
 }
 

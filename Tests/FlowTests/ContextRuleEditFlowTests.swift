@@ -103,7 +103,7 @@ struct LoadParsedContextRuleTests {
     func loadRule_notConnected() async throws {
         let state = ContextRuleFixtures.disconnectedState()
         let made = BuilderFixtures.makeFlow(state: state)
-        await #expect(throws: WalletException.NotConnected.self) {
+        await #expect(throws: SmartAccountWalletException.NotConnected.self) {
             _ = try await made.flow.loadParsedContextRule(ruleId: 1)
         }
     }

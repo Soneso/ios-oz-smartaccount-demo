@@ -29,7 +29,7 @@ final class MockSmartAccountExecutor: SmartAccountExecutorType, @unchecked Senda
             target: String,
             targetFn: String,
             targetArgs: [SCValXDR],
-            selectedSigners: [SelectedSigner]
+            selectedSigners: [OZSelectedSigner]
         )
 
         /// The invoked function name across both single- and multi-signer
@@ -48,20 +48,20 @@ final class MockSmartAccountExecutor: SmartAccountExecutorType, @unchecked Senda
     /// Recorded call ledger in execution order. Tests assert against this.
     private(set) var executeCalls: [ExecuteCall] = []
 
-    var executeResult: TransactionResult?
+    var executeResult: OZTransactionResult?
     var executeError: Error?
-    var multiSignerExecuteResult: TransactionResult?
+    var multiSignerExecuteResult: OZTransactionResult?
     var multiSignerExecuteError: Error?
 
-    private static func defaultSuccess(_ tag: String) -> TransactionResult {
-        TransactionResult(success: true, hash: "executor-\(tag)-hash", error: nil)
+    private static func defaultSuccess(_ tag: String) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: "executor-\(tag)-hash", error: nil)
     }
 
     func executeAndSubmit(
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR]
-    ) async throws -> TransactionResult {
+    ) async throws -> OZTransactionResult {
         executeCalls.append(
             .execute(target: target, targetFn: targetFn, targetArgs: targetArgs)
         )
@@ -73,8 +73,8 @@ final class MockSmartAccountExecutor: SmartAccountExecutorType, @unchecked Senda
         target: String,
         targetFn: String,
         targetArgs: [SCValXDR],
-        selectedSigners: [SelectedSigner]
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner]
+    ) async throws -> OZTransactionResult {
         executeCalls.append(
             .multiSignerExecute(
                 target: target,

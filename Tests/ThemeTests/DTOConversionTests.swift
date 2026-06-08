@@ -55,22 +55,22 @@ struct WalletConnectOptionsToSDKTests {
 }
 
 // ============================================================================
-// MARK: - AuthenticatePasskeyResult.asPasskeyCredential
+// MARK: - OZAuthenticatePasskeyResult.asPasskeyCredential
 // ============================================================================
 
-@Suite("DTOConversion: AuthenticatePasskeyResult.asPasskeyCredential")
+@Suite("DTOConversion: OZAuthenticatePasskeyResult.asPasskeyCredential")
 struct AuthenticatePasskeyResultAsPasskeyCredentialTests {
 
-    /// Builds an `AuthenticatePasskeyResult` with synthetic but correctly-sized
+    /// Builds an `OZAuthenticatePasskeyResult` with synthetic but correctly-sized
     /// byte buffers. The 64-byte signature requirement is enforced by
     /// `OZWebAuthnSignature.init`, so this helper catches size bugs immediately.
-    private func makeAuthResult(credentialId: String) throws -> AuthenticatePasskeyResult {
+    private func makeAuthResult(credentialId: String) throws -> OZAuthenticatePasskeyResult {
         let signature = try OZWebAuthnSignature(
             authenticatorData: Data(repeating: 0xAB, count: 37),
             clientData: Data(repeating: 0xCD, count: 100),
             signature: Data(repeating: 0xEF, count: 64)
         )
-        return AuthenticatePasskeyResult(
+        return OZAuthenticatePasskeyResult(
             credentialId: credentialId,
             signature: signature,
             publicKey: Data(repeating: 0x04, count: 65)
@@ -95,15 +95,15 @@ struct AuthenticatePasskeyResultAsPasskeyCredentialTests {
 }
 
 // ============================================================================
-// MARK: - DeployPendingResult.asPendingDeployResult
+// MARK: - OZDeployPendingResult.asPendingDeployResult
 // ============================================================================
 
-@Suite("DTOConversion: DeployPendingResult.asPendingDeployResult")
+@Suite("DTOConversion: OZDeployPendingResult.asPendingDeployResult")
 struct DeployPendingResultAsPendingDeployResultTests {
 
     @Test("asPendingDeployResult maps contractId and transactionHash when both present")
     func mapsBothFields() {
-        let sdk = DeployPendingResult(
+        let sdk = OZDeployPendingResult(
             contractId: "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             signedTransactionXdr: "base64xdrhere",
             transactionHash: "txhash-abc123"
@@ -115,7 +115,7 @@ struct DeployPendingResultAsPendingDeployResultTests {
 
     @Test("asPendingDeployResult maps nil transactionHash")
     func mapsNilTransactionHash() {
-        let sdk = DeployPendingResult(
+        let sdk = OZDeployPendingResult(
             contractId: "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             signedTransactionXdr: "xdr"
         )
@@ -126,7 +126,7 @@ struct DeployPendingResultAsPendingDeployResultTests {
 
     @Test("asPendingDeployResult does not expose signedTransactionXdr")
     func doesNotExposeXdr() {
-        let sdk = DeployPendingResult(
+        let sdk = OZDeployPendingResult(
             contractId: "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             signedTransactionXdr: "sensitive-xdr"
         )
@@ -138,18 +138,18 @@ struct DeployPendingResultAsPendingDeployResultTests {
 }
 
 // ============================================================================
-// MARK: - [StoredCredential].asPendingInfo()
+// MARK: - [OZStoredCredential].asPendingInfo()
 // ============================================================================
 
-@Suite("DTOConversion: [StoredCredential].asPendingInfo()")
+@Suite("DTOConversion: [OZStoredCredential].asPendingInfo()")
 struct StoredCredentialAsPendingInfoTests {
 
     private func makeCredential(
         credentialId: String,
         contractId: String?,
         nickname: String?
-    ) -> StoredCredential {
-        StoredCredential(
+    ) -> OZStoredCredential {
+        OZStoredCredential(
             credentialId: credentialId,
             publicKey: Data(repeating: 0x04, count: 65),
             contractId: contractId,
@@ -179,11 +179,11 @@ struct StoredCredentialAsPendingInfoTests {
 
     @Test("asPendingInfo on empty array returns empty array")
     func mapsEmptyArray() {
-        let infos = [StoredCredential]().asPendingInfo()
+        let infos = [OZStoredCredential]().asPendingInfo()
         #expect(infos.isEmpty)
     }
 
-    @Test("PendingCredentialInfo init from StoredCredential projects only UI fields")
+    @Test("PendingCredentialInfo init from OZStoredCredential projects only UI fields")
     func initFromStoredCredential() {
         let credential = makeCredential(
             credentialId: "cred-abc",
@@ -198,15 +198,15 @@ struct StoredCredentialAsPendingInfoTests {
 }
 
 // ============================================================================
-// MARK: - ConnectWalletResult.toConnectionResult(isDeployed:)
+// MARK: - OZConnectWalletResult.toConnectionResult(isDeployed:)
 // ============================================================================
 
-@Suite("DTOConversion: ConnectWalletResult.toConnectionResult(isDeployed:)")
+@Suite("DTOConversion: OZConnectWalletResult.toConnectionResult(isDeployed:)")
 struct ConnectWalletResultToConnectionResultTests {
 
     @Test("connected case maps all fields with isDeployed=true")
     func connectedCaseMapsAllFields() {
-        let sdk = ConnectWalletResult.connected(
+        let sdk = OZConnectWalletResult.connected(
             credentialId: "cred-connect",
             contractId: "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             restoredFromSession: true
@@ -226,7 +226,7 @@ struct ConnectWalletResultToConnectionResultTests {
 
     @Test("connected case maps isDeployed=false when default")
     func connectedCaseDefaultIsDeployed() {
-        let sdk = ConnectWalletResult.connected(
+        let sdk = OZConnectWalletResult.connected(
             credentialId: "cred-x",
             contractId: "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             restoredFromSession: false
@@ -245,7 +245,7 @@ struct ConnectWalletResultToConnectionResultTests {
             "CDUMMYCONTRACT23456789012345678901234567890ABCDEFGHI",
             "CANOTHERCONTRACT3456789012345678901234567890ABCDEFGH"
         ]
-        let sdk = ConnectWalletResult.ambiguous(credentialId: "cred-ambig", candidates: candidates)
+        let sdk = OZConnectWalletResult.ambiguous(credentialId: "cred-ambig", candidates: candidates)
         let dto = sdk.toConnectionResult(isDeployed: false)
         if case .ambiguous(let credentialId, let resultCandidates) = dto {
             #expect(credentialId == "cred-ambig")

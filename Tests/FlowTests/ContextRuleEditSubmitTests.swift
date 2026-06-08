@@ -170,7 +170,7 @@ struct SubmitContextRuleEditsTests {
     @Test("Failure at remove-signer step halts and reports failed step")
     func failureHalts() async throws {
         let pair = EditFlowFixtures.makeFlow()
-        pair.manager.removeSignerResult = TransactionResult(
+        pair.manager.removeSignerResult = OZTransactionResult(
             success: false,
             hash: nil,
             error: "contract reverted"

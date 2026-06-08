@@ -247,7 +247,7 @@ struct ContextRuleFlowFallbackTests {
     @MainActor
     func listContextRules_fallbackRule_returnedWithoutThrowing() async throws {
         // Scenario #6: the SDK has parsed a rule into a structurally unusual
-        // `ParsedContextRule` (createContract context, empty name, no signers,
+        // `OZParsedContextRule` (createContract context, empty name, no signers,
         // no policies). The flow must surface it untouched — neither the sort
         // step nor the success log path is allowed to mutate or drop the shape.
         let made = ContextRuleFixtures.makeFlow()

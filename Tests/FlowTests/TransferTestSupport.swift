@@ -20,7 +20,7 @@ import stellarsdk
 /// Controls return values via `result` and `error`. Records call parameters for assertions.
 final class MockTransactionOperations: TransactionOperationsType, @unchecked Sendable {
 
-    var result: TransactionResult?
+    var result: OZTransactionResult?
     var error: Error?
     private(set) var callCount: Int = 0
     private(set) var lastTokenContract: String?
@@ -31,8 +31,8 @@ final class MockTransactionOperations: TransactionOperationsType, @unchecked Sen
         tokenContract: String,
         recipient: String,
         amount: String,
-        forceMethod: SubmissionMethod?
-    ) async throws -> TransactionResult {
+        forceMethod: OZSubmissionMethod?
+    ) async throws -> OZTransactionResult {
         callCount += 1
         lastTokenContract = tokenContract
         lastRecipient = recipient
@@ -52,7 +52,7 @@ final class MockTransactionOperations: TransactionOperationsType, @unchecked Sen
 /// Configurable mock for `MultiSignerManagerType`.
 final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable {
 
-    var result: TransactionResult?
+    var result: OZTransactionResult?
     var error: Error?
     /// Optional hook invoked (awaited) at the moment the SDK call runs, before
     /// returning `result` / throwing `error`. Lets tests capture the live
@@ -63,17 +63,17 @@ final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable 
     private(set) var lastTokenContract: String?
     private(set) var lastRecipient: String?
     private(set) var lastAmount: String?
-    private(set) var lastSelectedSigners: [SelectedSigner] = []
+    private(set) var lastSelectedSigners: [OZSelectedSigner] = []
 
     // swiftlint:disable:next function_parameter_count
     func multiSignerTransfer(
         tokenContract: String,
         recipient: String,
         amount: String,
-        selectedSigners: [SelectedSigner],
-        forceMethod: SubmissionMethod?,
-        resolveContextRuleIds: ResolveContextRuleIds?
-    ) async throws -> TransactionResult {
+        selectedSigners: [OZSelectedSigner],
+        forceMethod: OZSubmissionMethod?,
+        resolveContextRuleIds: OZResolveContextRuleIds?
+    ) async throws -> OZTransactionResult {
         callCount += 1
         lastTokenContract = tokenContract
         lastRecipient = recipient
@@ -95,11 +95,11 @@ final class MockMultiSignerManager: MultiSignerManagerType, @unchecked Sendable 
 /// Configurable mock for `ContextRuleManagerType`.
 final class MockContextRuleManager: ContextRuleManagerType, @unchecked Sendable {
 
-    var result: [ParsedContextRule] = []
+    var result: [OZParsedContextRule] = []
     var error: Error?
     private(set) var callCount: Int = 0
 
-    func listContextRules() async throws -> [ParsedContextRule] {
+    func listContextRules() async throws -> [OZParsedContextRule] {
         callCount += 1
         if let error { throw error }
         return result
@@ -157,14 +157,14 @@ enum TransferFixtures {
     static let nativeTokenContract = DemoConfig.nativeTokenContract
     static let txHash = "deadbeef01020304deadbeef01020304deadbeef01020304deadbeef01020304"
 
-    /// A successful `TransactionResult` from the SDK.
-    static func successResult(hash: String = txHash) -> TransactionResult {
-        TransactionResult(success: true, hash: hash, error: nil)
+    /// A successful `OZTransactionResult` from the SDK.
+    static func successResult(hash: String = txHash) -> OZTransactionResult {
+        OZTransactionResult(success: true, hash: hash, error: nil)
     }
 
-    /// A failed `TransactionResult` from the SDK (success == false).
-    static func failedResult(error: String = "Insufficient balance") -> TransactionResult {
-        TransactionResult(success: false, hash: nil, error: error)
+    /// A failed `OZTransactionResult` from the SDK (success == false).
+    static func failedResult(error: String = "Insufficient balance") -> OZTransactionResult {
+        OZTransactionResult(success: false, hash: nil, error: error)
     }
 
     /// Builds a `DemoState` already connected.
@@ -251,21 +251,21 @@ enum TransferFixtures {
         return TransferSignerInfo(signer: signer, canSign: false)
     }
 
-    // MARK: - ParsedContextRule fixtures
+    // MARK: - OZParsedContextRule fixtures
 
-    /// Builds a `[ParsedContextRule]` fixture containing one connected WebAuthn signer
+    /// Builds a `[OZParsedContextRule]` fixture containing one connected WebAuthn signer
     /// and one delegated Stellar account signer in a single default-type rule.
     ///
     /// Used to test `loadAvailableSigners` / `extractSigners` without hitting the network.
     static func contextRuleWithPasskeyAndDelegated(
         delegatedAddress: String = DemoExternalSignersTestSupport.delegatedAddress
-    ) -> [ParsedContextRule] {
+    ) -> [OZParsedContextRule] {
         let passkeyInfo = webAuthnSignerInfo(
             credentialId: credentialId,
             connectedCredentialId: credentialId
         )
         let delegatedInfo = delegatedSignerInfo(address: delegatedAddress)
-        let rule = ParsedContextRule(
+        let rule = OZParsedContextRule(
             id: 1,
             contextType: .defaultRule,
             name: "test-rule",

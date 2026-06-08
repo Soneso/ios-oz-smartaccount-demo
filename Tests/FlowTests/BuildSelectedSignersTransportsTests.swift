@@ -22,7 +22,7 @@ import Testing
 /// manager).
 ///
 /// These guard the transport-hint lookup: a passkey signer whose stored
-/// credential carries `transports` must produce a `.passkey` ``SelectedSigner``
+/// credential carries `transports` must produce a `.passkey` ``OZSelectedSigner``
 /// carrying exactly those transports, and a passkey signer with no stored
 /// credential (or a stored credential without transports) must produce `nil`
 /// transports. If the lookup were removed, the first assertion would fail
@@ -50,7 +50,7 @@ struct BuildSelectedSignersTransportsTests {
             networkPassphrase: DemoConfig.networkPassphrase,
             accountWasmHash: DemoConfig.accountWasmHash,
             webauthnVerifierAddress: DemoConfig.webauthnVerifierAddress,
-            storage: InMemoryStorageAdapter()
+            storage: OZInMemoryStorageAdapter()
         )
         return OZSmartAccountKit.create(config: config)
     }
@@ -83,9 +83,9 @@ struct BuildSelectedSignersTransportsTests {
         return key
     }
 
-    /// Extracts the transports from a `.passkey` ``SelectedSigner``, or `nil`
+    /// Extracts the transports from a `.passkey` ``OZSelectedSigner``, or `nil`
     /// for any other case.
-    private func transports(of selected: SelectedSigner) -> [String]? {
+    private func transports(of selected: OZSelectedSigner) -> [String]? {
         switch selected {
         case let .passkey(_, _, _, transports):
             return transports

@@ -215,14 +215,14 @@ struct SDKAdapterSmokeTest {
                 authEntry: legitimatePreimageBase64
             )
             Issue.record(
-                "Expected TransactionException.SigningFailed but signAuthEntry returned successfully"
+                "Expected SmartAccountTransactionException.SigningFailed but signAuthEntry returned successfully"
             )
-        } catch let error as TransactionException.SigningFailed {
+        } catch let error as SmartAccountTransactionException.SigningFailed {
             // Expected: SDK verify gate caught the wrong-payload signature.
             #expect(!error.localizedDescription.isEmpty)
         } catch {
             Issue.record(
-                "Expected TransactionException.SigningFailed but got \(type(of: error)): \(error)"
+                "Expected SmartAccountTransactionException.SigningFailed but got \(type(of: error)): \(error)"
             )
         }
     }
