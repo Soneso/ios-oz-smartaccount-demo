@@ -451,6 +451,9 @@ public final class MainScreenFlow {
             return (.success,
                     "Wallet connected: \(truncateAddress(contractId)) (cred: \(safeCredId))")
 
+        case .walletConnectedHeadless(let contractId):
+            return (.info, "Connected headlessly to \(truncateAddress(contractId))")
+
         case .walletDisconnected(let contractId):
             return (.info, "Wallet disconnected: \(truncateAddress(contractId))")
 

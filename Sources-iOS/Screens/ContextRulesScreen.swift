@@ -28,7 +28,8 @@ struct ContextRulesScreen: View {
             onAddRule: { navigationPath.append(Route.contextRuleBuilder) },
             onEditRule: { id in
                 navigationPath.append(Route.contextRuleEditor(id: id))
-            }
+            },
+            onDelegateToAgent: { navigationPath.append(Route.delegateToAgent) }
         )
         .navigationTitle("Context Rules")
         .navigationBarTitleDisplayMode(.inline)

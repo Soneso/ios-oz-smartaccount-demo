@@ -37,8 +37,11 @@ configFiles:
 # ============================================================================
 packages:
   stellarsdk:
-    url: https://github.com/Soneso/stellar-ios-mac-sdk.git
-    from: 3.6.0
+    # TEMPORARY local override to the sa-improvements branch of the SDK clone.
+    # That branch carries connectToContract (headless smart-account connect) and
+    # the auto-fund RPC-visibility poll fix, neither of which is in any released
+    # version yet. Revert to `url:`/`from:` once those ship to a published tag.
+    path: ../stellar-ios-mac-sdk
   reown-swift:
     url: https://github.com/reown-com/reown-swift
     # 2.2.9 — latest stable verified 2026-05-16

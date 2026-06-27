@@ -72,6 +72,10 @@ struct RootView: View {
                         .tag(Route.accountSigners)
                     Label("Approve", systemImage: "checkmark.seal")
                         .tag(Route.approve)
+                    Label("Delegate to Agent", systemImage: "person.badge.key")
+                        .tag(Route.delegateToAgent)
+                    Label("Approval Inbox", systemImage: "bell")
+                        .tag(Route.approvalInbox)
                 }
             }
             .navigationTitle("Smart Account Demo")
@@ -93,7 +97,7 @@ struct RootView: View {
     private func detail(for route: Route?) -> some View {
         switch route {
         case .main, .none:
-            MainScreen()
+            MainScreen(onOpenInbox: { navigationIntent.selectedRoute = .approvalInbox })
         case .walletCreation:
             WalletCreationScreen(selectedRoute: $navigationIntent.selectedRoute)
         case .walletConnection:
@@ -110,6 +114,10 @@ struct RootView: View {
             KnownSignersScreen(selectedRoute: $navigationIntent.selectedRoute)
         case .approve:
             ApproveScreen(selectedRoute: $navigationIntent.selectedRoute)
+        case .delegateToAgent:
+            DelegateToAgentScreen(selectedRoute: $navigationIntent.selectedRoute)
+        case .approvalInbox:
+            ApprovalInboxScreen()
         }
     }
     // swiftlint:enable cyclomatic_complexity

@@ -90,6 +90,57 @@ public enum DemoFlowFactory {
     }
 
     // -------------------------------------------------------------------------
+    // MARK: - DelegateToAgentFlow
+    // -------------------------------------------------------------------------
+
+    /// Creates a `DelegateToAgentFlow` wrapping a fully-wired `ContextRuleFlow`.
+    ///
+    /// Reuses ``makeContextRuleBuilderFlow(demoState:activityLog:)`` so the
+    /// delegate composition (Ed25519 signer + spending-limit policy + validUntil)
+    /// submits through the same `addContextRule` path as the builder screen.
+    @MainActor
+    public static func makeDelegateToAgentFlow(
+        demoState: DemoState,
+        activityLog: ActivityLogState
+    ) -> DelegateToAgentFlow {
+        DelegateToAgentFlow(
+            contextRuleFlow: makeContextRuleBuilderFlow(demoState: demoState, activityLog: activityLog),
+            activityLog: activityLog
+        )
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - ApprovalInboxFlow
+    // -------------------------------------------------------------------------
+
+    /// Creates an `ApprovalInboxFlow` wired to the demo's coordination client and
+    /// the kit's single-signer contract-call path.
+    ///
+    /// The contract-call provider resolves lazily on each call so a kit that
+    /// becomes available after this flow is constructed is picked up without
+    /// rebuilding the flow. Returns `nil` from the provider when no kit exists,
+    /// which the flow surfaces as a "no wallet connected" error.
+    @MainActor
+    public static func makeApprovalInboxFlow(
+        demoState: DemoState,
+        activityLog: ActivityLogState
+    ) -> ApprovalInboxFlow {
+        let coordination = demoState.coordinationClient
+            ?? URLSessionCoordinationClient(baseURL: DemoConfig.coordinationURL, token: DemoConfig.coordinationToken)
+        return ApprovalInboxFlow(
+            coordination: coordination,
+            activityLog: activityLog,
+            demoState: demoState,
+            contractCallProvider: { @MainActor in
+                demoState.kit.map { ContractCallOperationsAdapter($0.transactionOperations) }
+            },
+            // The agent flow scopes the delegation to the demo token, so decoded
+            // consent amounts are formatted at the demo token's configured scale.
+            tokenDecimals: Int(DemoConfig.demoTokenDecimals)
+        )
+    }
+
+    // -------------------------------------------------------------------------
     // MARK: - AccountSignersFlow
     // -------------------------------------------------------------------------
 

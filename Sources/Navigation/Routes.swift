@@ -55,4 +55,18 @@ public enum Route: Hashable {
     /// Approve screen for granting DEMO token spending allowances from the
     /// connected smart account.
     case approve
+
+    /// Delegate-to-agent screen (step 2 of the agent-signer flow).
+    ///
+    /// Reached from the context rules screen. Composes a single on-chain
+    /// context rule granting an Ed25519 agent a scoped, spend-capped,
+    /// time-bounded authority on the connected smart account.
+    case delegateToAgent
+
+    /// Approval inbox screen (steps 4 + 5 of the agent-signer flow).
+    ///
+    /// Reached from the main screen's inbox bell. Lists the policy-rejected
+    /// calls the autonomous agent escalated to the coordination server, scoped
+    /// to the connected smart account, for the user to approve or reject.
+    case approvalInbox
 }

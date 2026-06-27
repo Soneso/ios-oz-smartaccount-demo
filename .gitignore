@@ -54,3 +54,6 @@ TestResults/
 # Coverage
 *.profdata
 *.profraw
+
+# Private working notes (plans, scratch) — not part of the demo
+plans/
