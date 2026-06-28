@@ -60,6 +60,15 @@ public struct ApprovalInboxScreenCore: View {
     /// outstanding: their card shows "Retry report" instead of "Approve".
     @State private var reportPending: Set<String> = []
 
+    /// Session-scoped list of approvals that resolved on-chain, newest first.
+    ///
+    /// Each entry retains the FULL transaction hash so the user can copy it or
+    /// open it on the explorer after the brief confirmation toast has gone. An
+    /// approval that confirmed on-chain without a returned hash is kept here too,
+    /// with an empty hash, so it degrades to an informational row rather than a
+    /// broken copy control. Cleared only when the screen is torn down.
+    @State private var approvedResults: [ApprovedResult] = []
+
     // -------------------------------------------------------------------------
     // MARK: - Reject dialog state
     // -------------------------------------------------------------------------
@@ -88,6 +97,7 @@ public struct ApprovalInboxScreenCore: View {
             descriptionSection
             connectionNoteSection
             refreshSection
+            approvedSection
             contentSections
         }
         .snackbar($snackbarMessage)
@@ -177,6 +187,35 @@ public struct ApprovalInboxScreenCore: View {
             .disabled(isLoading)
         }
         .listRowBackground(Color.clear)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: - Approved section
+    // -------------------------------------------------------------------------
+
+    @ViewBuilder
+    private var approvedSection: some View {
+        if !approvedResults.isEmpty {
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    SectionHeader(title: "Approved")
+                    Text(
+                        "Approvals that resolved on-chain this session. Copy a transaction hash or " +
+                        "open it on the explorer to look it up."
+                    )
+                    .font(Typography.secondary)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                ForEach(approvedResults) { result in
+                    ApprovedResultCard(result: result, snackbarMessage: $snackbarMessage)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -272,13 +311,29 @@ public struct ApprovalInboxScreenCore: View {
         let result = await resolvedFlow().approveRequest(request)
         endAction(request.id)
         if result.success {
+            recordApproved(request, hash: result.hash ?? "")
             removeResolved(request.id)
-            showSnack("Approved. Transaction \(truncateAddress(result.hash ?? ""))")
+            showSnack("Approved.")
             postAccessibilityAnnouncement("Approval submitted")
         } else if result.confirmedOnChain {
-            reportPending.insert(request.id)
-            showSnack(result.error ??
-                "Transaction confirmed on-chain, but reporting it back failed. Retry the report.")
+            let hash = result.hash ?? ""
+            if hash.isEmpty {
+                // Confirmed on-chain but no hash returned: nothing to report back,
+                // so resolve the card and keep an informational approved entry.
+                recordApproved(request, hash: hash)
+                removeResolved(request.id)
+                showSnack(result.error ??
+                    "Transaction confirmed on-chain, but no transaction hash was returned.")
+                postAccessibilityAnnouncement("Approval confirmed on-chain")
+            } else {
+                // Hash known but report-back failed: surface the confirmed hash in the
+                // persistent approved list so it stays copyable, and keep the card so the
+                // user can retry the report without re-submitting the call.
+                recordApproved(request, hash: hash)
+                reportPending.insert(request.id)
+                showSnack(result.error ??
+                    "Transaction confirmed on-chain, but reporting it back failed. Retry the report.")
+            }
         } else {
             showSnack(result.error ?? "Approval failed.")
         }
@@ -290,8 +345,9 @@ public struct ApprovalInboxScreenCore: View {
         let result = await resolvedFlow().retryReport(request)
         endAction(request.id)
         if result.success {
+            recordApproved(request, hash: result.hash ?? "")
             removeResolved(request.id)
-            showSnack("Reported. Transaction \(truncateAddress(result.hash ?? ""))")
+            showSnack("Reported.")
         } else {
             showSnack(result.error ?? "Reporting failed.")
         }
@@ -339,6 +395,22 @@ public struct ApprovalInboxScreenCore: View {
 
     private func showSnack(_ message: String) {
         snackbarMessage = SnackbarMessage(message)
+    }
+
+    /// Records a resolved approval in the persistent session list, newest first.
+    ///
+    /// A blank `hash` marks the confirmed-on-chain-but-no-hash case so the card
+    /// renders an informational row with no copy/explorer control. Re-recording
+    /// the same request (for example a retried report) replaces the prior entry.
+    private func recordApproved(_ request: CoordinationRequest, hash: String) {
+        let decoded = resolvedFlow().decodeCall(request)
+        let entry = ApprovedResult(
+            requestId: request.id,
+            txHash: hash,
+            contextLabel: ApprovedResult.contextLabel(for: request, decoded: decoded)
+        )
+        approvedResults.removeAll { $0.requestId == request.id }
+        approvedResults.insert(entry, at: 0)
     }
 
     // -------------------------------------------------------------------------
@@ -469,6 +541,162 @@ private struct RequestCard: View {
             .disabled(!enabled || busy)
         }
         .padding(.top, 4)
+    }
+}
+
+// ============================================================================
+// MARK: - ApprovedResult
+// ============================================================================
+
+/// A single resolved approval retained on the inbox screen for the session.
+///
+/// Holds the FULL transaction hash so the user can copy it or open it on the
+/// explorer after the transient confirmation toast is gone. An approval that
+/// confirmed on-chain without a returned hash is represented with an empty
+/// ``txHash``; such an entry exposes no copy or explorer affordance.
+public struct ApprovedResult: Identifiable, Equatable, Sendable {
+
+    /// The coordination request this approval resolved.
+    public let requestId: String
+
+    /// The full on-chain transaction hash, or the empty string when the call
+    /// confirmed on-chain but no hash was returned.
+    public let txHash: String
+
+    /// Short human-readable summary of the approved call (function, amount,
+    /// recipient) shown above the hash, when cheaply derivable.
+    public let contextLabel: String?
+
+    public var id: String { requestId }
+
+    public init(requestId: String, txHash: String, contextLabel: String? = nil) {
+        self.requestId = requestId
+        self.txHash = txHash
+        self.contextLabel = contextLabel
+    }
+
+    /// True when a real on-chain hash is available to copy or open.
+    public var hasHash: Bool { !txHash.isEmpty }
+
+    /// stellar.expert testnet explorer URL for the transaction, or `nil` when no
+    /// hash is available.
+    public var explorerURL: URL? {
+        guard hasHash else { return nil }
+        return URL(string: "https://stellar.expert/explorer/testnet/tx/\(txHash)")
+    }
+
+    /// Derives a concise context label from the decoded call shape, or falls
+    /// back to the called function name.
+    public static func contextLabel(for request: CoordinationRequest, decoded: DecodedCall) -> String? {
+        switch decoded.kind {
+        case .transfer, .approve:
+            let verb = decoded.kind == .approve ? "approve" : "transfer"
+            let amount = decoded.amount ?? "—"
+            let recipient = truncateAddress(decoded.recipient ?? "—")
+            return "\(verb) \(amount) to \(recipient)"
+        case .unknown, .undecodable:
+            return request.targetFn
+        }
+    }
+}
+
+// ============================================================================
+// MARK: - ApprovedResultCard
+// ============================================================================
+
+/// A persistent card showing one resolved approval with a copyable, selectable
+/// full transaction hash and a "View on Explorer" link.
+///
+/// When the approval confirmed on-chain but returned no hash, the card degrades
+/// to an informational row with no copy or explorer affordance.
+private struct ApprovedResultCard: View {
+
+    let result: ApprovedResult
+    @Binding var snackbarMessage: SnackbarMessage?
+
+    @Environment(\.clipboard) private var clipboard
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            if let label = result.contextLabel {
+                Text(label)
+                    .font(Typography.secondary)
+                    .foregroundStyle(.secondary)
+            }
+            if result.hasHash {
+                hashBlock
+                actionRow
+            } else {
+                noHashNote
+            }
+        }
+        .sectionCard()
+    }
+
+    private var header: some View {
+        HStack(spacing: Tokens.iconLabelSpacing) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.semanticSuccess)
+                .accessibilityHidden(true)
+            Text("Approved")
+                .font(Typography.sectionHeader.weight(.bold))
+            Spacer(minLength: 8)
+        }
+    }
+
+    private var hashBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Transaction Hash")
+                .font(Typography.caption)
+                .foregroundStyle(Color.brandOnSurfaceVariant)
+                .accessibilityHidden(true)
+            Text(result.txHash)
+                .font(.system(.footnote, design: .monospaced))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .accessibilityLabel("Transaction hash: \(result.txHash)")
+        }
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: 16) {
+            Button(action: copyHash) {
+                Label("Copy", systemImage: "doc.on.doc")
+                    .font(Typography.buttonLabel)
+                    .foregroundStyle(Color.brandPrimary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Copies the full transaction hash to the clipboard.")
+
+            if let url = result.explorerURL {
+                Link(destination: url) {
+                    Label("View on Explorer", systemImage: "arrow.up.right.square")
+                        .font(Typography.buttonLabel)
+                        .foregroundStyle(Color.brandPrimary)
+                }
+                .accessibilityHint("Opens the transaction on stellar.expert.")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 2)
+    }
+
+    private var noHashNote: some View {
+        HStack(alignment: .top, spacing: Tokens.iconLabelSpacing) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Text("Confirmed on-chain (no transaction hash returned).")
+                .font(Typography.secondary)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func copyHash() {
+        clipboard.copy(result.txHash, sensitive: false)
+        snackbarMessage = SnackbarMessage("Transaction hash copied")
     }
 }
 
