@@ -28,17 +28,11 @@ device by hand.
   packages).
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen). The Xcode project is
   generated from `project.yml`; run `xcodegen generate` after any edit to it.
-- **Temporary local-SDK override.** `connectToContract` (headless
-  smart-account connect) and the auto-fund RPC-visibility poll fix that this
-  flow depends on are only on the local SDK clone
-  `../stellar-ios-mac-sdk`, branch `sa-improvements`; they are not in a
-  published tag yet. `project.yml` therefore points the `stellarsdk` package at
-  `path: ../stellar-ios-mac-sdk` (no `url`/`from`), and both SwiftPM packages
-  path-depend on the same clone (`reference_agent` →
-  `.package(path: "../../stellar-ios-mac-sdk")`). This override is temporary and
-  must be switched back to a published `stellarsdk` version before release.
-  After changing `project.yml`, run `xcodegen generate` and confirm the app
-  still builds.
+- **SDK version.** This flow uses headless `connectToContract` and the
+  auto-fund RPC-visibility polling, which require `stellar-ios-mac-sdk` 3.6.1 or
+  newer. The app (`project.yml`) and the `reference_agent` package depend on a
+  published `stellarsdk` version (`from: 3.6.1`); the coordination server depends
+  only on Hummingbird. No local override is needed.
 
 Build commands for reference:
 

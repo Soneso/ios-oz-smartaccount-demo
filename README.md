@@ -1,6 +1,6 @@
 # OpenZeppelin Smart Account Demo - iOS/macOS Stellar SDK
 
-A native Swift demo application for testing the OpenZeppelin smart-account support in the iOS/macOS Stellar SDK with WebAuthn passkey authentication on Stellar testnet. The app covers wallet creation, token transfers, multi-signer authorization, and on-chain context rule management.
+A native Swift demo application for testing the OpenZeppelin smart-account support in the iOS/macOS Stellar SDK with WebAuthn passkey authentication on Stellar testnet. The app covers wallet creation, token transfers, multi-signer authorization, on-chain context rule management, and an agent-signer flow that delegates scoped, spend-capped authority to an autonomous agent.
 
 The primary purpose of this app is to test and validate the SDK's smart-account support. It is not intended as a production application template.
 
@@ -8,10 +8,10 @@ Supported platforms: iOS 18.0+ (iPhone and iPad) and macOS 15.0+ (native).
 
 ## Features
 
-The demo includes 8 user-facing screens.
+The demo includes 10 user-facing screens.
 
 ### 1. Main Dashboard
-Wallet status display with XLM and DEMO token balances, navigation to all other screens, activity log showing SDK operations in real time, balance refresh, and wallet disconnect.
+Wallet status display with XLM and DEMO token balances, navigation to all other screens, an approval-inbox bell that badges pending agent escalations, activity log showing SDK operations in real time, balance refresh, and wallet disconnect.
 
 ### 2. Wallet Creation
 Collects a username, registers a passkey via the platform's WebAuthn provider, deploys a smart account contract to testnet, funds the wallet with XLM via Friendbot, and mints 10,000 DEMO tokens. Displays the credential ID, contract address, transaction hash, and initial balances on completion.
@@ -38,6 +38,12 @@ Displays all unique signers registered across all context rules. Each signer ent
 ### 8. Approve
 Grants a SEP-41 token spending allowance that delegates spending authority over the smart account's tokens to another address. This screen demonstrates an arbitrary contract call: unlike Transfer (which uses the dedicated transfer helper), Approve invokes the token's `approve` function through the generic contract-call path, with both single-signer and multi-signer support.
 
+### 9. Delegate to an Agent
+Creates an on-chain context rule that scopes a raw Ed25519 agent key to a single token contract with a spending cap and an expiry, so an autonomous agent can sign transfers within that scope without a passkey. The result card exposes the agent key, the scoped token contract, and the transaction hash as copyable values for wiring the reference agent.
+
+### 10. Approval Inbox
+Reached from the bell on the Main Dashboard, which badges the count of pending escalations. When the agent attempts an over-cap call, the call is rejected on-chain and escalated to the coordination server; the inbox lists each pending request with its decoded call, and the user approves it (re-submitting it under the Default rule) or rejects it. An approved request shows its on-chain transaction hash as a copyable value.
+
 ## Architecture
 
 ```
@@ -58,12 +64,24 @@ ios-oz-smartaccount-demo/
 ├── Resources/                            # Assets.xcassets, LaunchScreen.storyboard, soroban_token_contract.wasm
 ├── Entitlements/                         # SmartAccountDemo.entitlements (iOS), SmartAccountDemoMac.entitlements (macOS)
 ├── Tests/                                # Component, flow, screen, state, util tests
+├── coordination_server/                  # Swift/Hummingbird coordination service (agent-signer flow)
+├── reference_agent/                      # Swift reference agent executable (agent-signer flow)
+├── documentation/                        # agent-flow.md end-to-end runbook
 └── project.yml                           # XcodeGen spec
 ```
 
 Each screen body lives in `Sources/Components/*ScreenCore.swift`, with thin platform shells in `Sources-iOS/Screens/` and `Sources-macOS/Screens/` adding only the navigation container and platform chrome. SDK calls stay concentrated in `Flows/`, with `FlowTypes/` surfacing DTOs and typealiases for the screen layer. `DemoState` holds wallet connection, balances, and the smart account kit instance; `ActivityLogState` is the sink for the live operation log.
 
 The iOS shell links the Reown SDK for external wallet pairing; the macOS shell does not, and supplies its own WebAuthn presentation anchor. Each shell uses its platform's native navigation container.
+
+## Agent-signer flow
+
+The demo includes an end-to-end agent-signer flow: a user delegates a scoped, spend-capped Ed25519 authority to an autonomous agent (Delegate to an Agent), the agent signs calls within that scope, and an over-cap call is rejected on-chain and escalated to the user for approval (Approval Inbox). Two Swift subprojects support it:
+
+- `coordination_server/` — a Swift/Hummingbird service that relays escalated calls between the agent and the app.
+- `reference_agent/` — a macOS executable that connects to the smart account headlessly (`connectToContract`), attempts a token transfer, and escalates over-cap calls.
+
+See [documentation/agent-flow.md](documentation/agent-flow.md) for the end-to-end runbook, plus the per-component [coordination_server/README.md](coordination_server/README.md) and [reference_agent/README.md](reference_agent/README.md).
 
 ## Prerequisites
 
@@ -72,7 +90,7 @@ The iOS shell links the Reown SDK for external wallet pairing; the macOS shell d
 - Swift 6.0 with `SWIFT_STRICT_CONCURRENCY: complete`
 - xcodegen 2.44+ (`brew install xcodegen`)
 - SwiftLint 0.63.2+ (`brew install swiftlint`)
-- stellar-ios-mac-sdk `3.5.0+` (resolved by Xcode on first package fetch from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
+- stellar-ios-mac-sdk `3.6.1+` (resolved by Xcode on first package fetch from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
 - Reown-swift `2.2.9` (pinned, resolved by Xcode on first package fetch)
 - Passkey (WebAuthn) features require the Associated Domains configuration in [PASSKEY_SETUP.md](PASSKEY_SETUP.md). The demo is preconfigured for `soneso.com` (works on the iOS Simulator as-is); macOS additionally needs a one-time `swcutil developer-mode -e true`.
 
