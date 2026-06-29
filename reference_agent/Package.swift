@@ -7,11 +7,7 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        // TEMPORARY local override to the sa-improvements branch of the SDK
-        // clone, which carries connectToContract (headless smart-account
-        // connect) and the auto-fund RPC-visibility poll fix. Neither is in a
-        // released tag yet. Switch to a published version before release.
-        .package(path: "../../stellar-ios-mac-sdk")
+        .package(url: "https://github.com/Soneso/stellar-ios-mac-sdk.git", from: "3.6.1")
     ],
     targets: [
         // Library carrying all agent logic so the orchestration is unit-testable

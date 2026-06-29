@@ -50,7 +50,8 @@ it, state is in-memory only.
 swift run coordination-server --token dev-token-change-me --port 8787 --store ./requests.json
 ```
 
-The server logs one line per request to stdout.
+The server logs one line per request to stdout, excluding CORS preflight
+(`OPTIONS`), which is answered before the logging layer runs.
 
 ## Authentication
 

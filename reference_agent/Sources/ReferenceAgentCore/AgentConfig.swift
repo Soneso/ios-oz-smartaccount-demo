@@ -211,7 +211,7 @@ public struct AgentConfig: Sendable, Equatable {
         guard let seed = agentSecretSeed, !seed.isEmpty else {
             throw AgentConfigError("agentSecretSeed is required.")
         }
-        if seed.count != 64 || !Hex.isHexString(seed) {
+        if seed.count != agentHexKeyLength || !Hex.isHexString(seed) {
             throw AgentConfigError(
                 "agentSecretSeed is not a valid 64-character hex Ed25519 seed."
             )
@@ -241,6 +241,14 @@ public struct AgentConfig: Sendable, Equatable {
         }
         if coordinationToken.isEmpty {
             throw AgentConfigError("coordinationToken is required.")
+        }
+        if pollMaxAttempts < 0 {
+            throw AgentConfigError(
+                "pollMaxAttempts must be zero or greater, got: \(pollMaxAttempts)."
+            )
+        }
+        if pollInterval < .zero {
+            throw AgentConfigError("pollInterval must be zero or greater.")
         }
     }
 
@@ -401,8 +409,10 @@ public struct AgentConfig: Sendable, Equatable {
         return object
     }
 
-    /// Renders a JSON scalar the way the layered resolver consumes it (string,
-    /// integer, double, or boolean), mirroring the Dart `.toString()` coercion.
+    /// Renders a JSON scalar as the string the layered resolver consumes (string,
+    /// integer, double, or boolean), so a value from the JSON config carries the
+    /// same parsing and precedence as the equivalent CLI argument or environment
+    /// variable.
     private static func stringify(_ value: Any) -> String {
         switch value {
         case let string as String:

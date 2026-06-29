@@ -1,7 +1,6 @@
 // Copyright 2026 Soneso. Reference agent for the OZ smart-account demo.
 //
-// Command-line entry point. Three modes, selected by environment gates that
-// mirror the Flutter reference agent:
+// Command-line entry point. Three modes, selected by environment gates:
 //
 //   - AGENT_PRINT_KEY=true (or --print-key): bootstrap keygen. Derives or
 //     generates the agent's Ed25519 identity and prints the `[agent] [KEY]`
@@ -70,7 +69,8 @@ if shouldPrintAgentKey(env: environment, args: arguments) {
 } else if runLiveRequested() {
     do {
         let config = try AgentConfig.resolve(args: arguments, env: environment)
-        try config.validateForLiveRun()
+        // Agent.fromConfig validates the config before any allocation, so no
+        // separate validateForLiveRun call is needed here.
         let agent = try Agent.fromConfig(config, logger: logger)
         let result = try await agent.run()
         await agent.dispose()

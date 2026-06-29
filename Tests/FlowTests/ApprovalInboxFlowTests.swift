@@ -302,6 +302,34 @@ struct ApprovalInboxFlowApproveTests {
         #expect(retry.hash == InboxFixtures.txHash)
         #expect(!flow.isAwaitingReport(request.id))
     }
+
+    @Test("a failed pre-submit status re-check fails closed and never submits on-chain")
+    @MainActor
+    func getFailure_abortsBeforeSubmit() async {
+        let args = InboxFixtures.transferArgs(
+            from: InboxFixtures.smartAccount,
+            to: InboxFixtures.recipientG,
+            amount: "1500000000"
+        )
+        let request = InboxFixtures.request(targetFn: "transfer", args: args)
+        let coordination = MockCoordinationClient()
+        coordination.pending = [request]
+        // The pre-submit `GET /requests/{id}` re-check fails. The flow must abort
+        // rather than re-submit the agent's call blind, so no contract call and no
+        // report-back occur, and the transaction is not flagged confirmed.
+        coordination.getError = CoordinationError(message: "lookup failed", statusCode: 500)
+        let contractCall = MockContractCallOperations()
+        contractCall.result = OZTransactionResult(success: true, hash: InboxFixtures.txHash, error: nil)
+        let flow = InboxFixtures.makeFlow(coordination: coordination, contractCall: contractCall)
+
+        let result = await flow.approveRequest(request)
+
+        #expect(!result.success)
+        #expect(result.error != nil)
+        #expect(!result.confirmedOnChain)
+        #expect(contractCall.callCount == 0)
+        #expect(coordination.approveCalls.isEmpty)
+    }
 }
 
 // ============================================================================
@@ -367,5 +395,43 @@ struct ApprovalInboxFlowRejectTests {
 
         let pending = try await flow.loadPending()
         #expect(pending.isEmpty)
+    }
+
+    @Test("loadPending and pendingCount propagate a coordination list failure")
+    @MainActor
+    func listFailure_propagates() async {
+        let coordination = MockCoordinationClient()
+        coordination.listError = CoordinationError(message: "server unreachable", statusCode: 503)
+        let flow = InboxFixtures.makeFlow(coordination: coordination, contractCall: nil)
+
+        // Both reads must surface the server failure to the screen (so it can
+        // render an error state) rather than swallow it and report an empty inbox.
+        await #expect(throws: CoordinationError.self) {
+            _ = try await flow.loadPending()
+        }
+        await #expect(throws: CoordinationError.self) {
+            _ = try await flow.pendingCount()
+        }
+        #expect(coordination.listCallCount == 2)
+    }
+
+    @Test("reject surfaces a coordination failure and reports it to the caller")
+    @MainActor
+    func rejectFailure_surfacesError() async {
+        let request = InboxFixtures.request(args: InboxFixtures.transferArgs(
+            from: InboxFixtures.smartAccount, to: InboxFixtures.recipientG, amount: "1"
+        ))
+        let coordination = MockCoordinationClient()
+        coordination.rejectError = CoordinationError(message: "reject failed", statusCode: 500)
+        let flow = InboxFixtures.makeFlow(coordination: coordination, contractCall: nil)
+
+        let result = await flow.rejectRequest(request, note: "no")
+
+        // A failed reject must not be reported as success, and the attempt (with
+        // the trimmed note) must still have reached the server.
+        #expect(!result.success)
+        #expect(result.error != nil)
+        #expect(coordination.rejectCalls.count == 1)
+        #expect(coordination.rejectCalls.first?.note == "no")
     }
 }

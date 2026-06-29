@@ -8,6 +8,12 @@ import Foundation
 /// the full snapshot to the backing file before returning. The write goes to a
 /// temporary file that is atomically renamed over the target, so the store
 /// file is never observed in a partially written state.
+///
+/// ``load()`` and ``flush()`` perform synchronous, blocking file I/O on the
+/// actor's executor, and `flush()` runs on every mutation. This is intentional
+/// for this demo: its request volume is low enough that the blocking write does
+/// not meaningfully stall the cooperative pool, and a synchronous write keeps
+/// the on-disk snapshot consistent with in-memory state at every return.
 public actor RequestStore {
     private let storePath: String?
     private let idGenerator: @Sendable () -> String
@@ -28,9 +34,6 @@ public actor RequestStore {
         self.idGenerator = idGenerator ?? { UUID().uuidString.lowercased() }
         self.clock = clock ?? { Int(Date().timeIntervalSince1970 * 1000) }
     }
-
-    /// Path of the backing JSON file, or `nil` when persistence is disabled.
-    public var backingStorePath: String? { storePath }
 
     /// Loads persisted records when a store path is configured and the file
     /// exists. Safe to call once during startup.

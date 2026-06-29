@@ -48,13 +48,11 @@ running the executable prints usage and touches nothing. A live run requires a
 smart account that already has the agent's Ed25519 key registered as a scoped
 signer (the step-2 delegation flow).
 
-## SDK override (temporary)
+## SDK dependency
 
-This package path-depends on the local SDK clone
-(`../../stellar-ios-mac-sdk`, branch `sa-improvements`), which carries
+This package requires the published `stellarsdk` 3.6.1 or later, which provides
 `connectToContract` (headless smart-account connect) and the auto-fund
-RPC-visibility poll fix. Neither is in a released tag yet. Switch to a published
-`stellarsdk` version before release.
+RPC-visibility poll fix.
 
 ## Bootstrap: get the agent's public key (print-key mode)
 

@@ -101,7 +101,7 @@ extension CoordinationRequest: Decodable {
         smartAccount = try container.decode(String.self, forKey: .smartAccount)
         target = try container.decode(String.self, forKey: .target)
         targetFn = try container.decode(String.self, forKey: .targetFn)
-        args = try container.decode([String].self, forKey: .args)
+        args = try container.decodeIfPresent([String].self, forKey: .args) ?? []
         amount = try container.decodeIfPresent(String.self, forKey: .amount) ?? ""
         reason = try container.decode(Int.self, forKey: .reason)
         status = try container.decode(String.self, forKey: .status)

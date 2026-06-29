@@ -112,9 +112,14 @@ public struct DelegateToAgentScreenCore: View {
     @State private var tokenError: String?
     @State private var amountError: String?
 
-    /// Resolved decimal scale of the guarded token; defaults to the demo token's
+    /// Resolved decimal scale of the scoped token; defaults to the demo token's
     /// scale until a custom token's `decimals()` is fetched.
     @State private var tokenDecimals: Int = Int(DemoConfig.demoTokenDecimals)
+
+    /// Set when the `decimals()` fetch for a non-native scoped token fails. While
+    /// non-nil the error is shown beneath the token field and the submit button
+    /// is disabled, so the spend cap is never encoded at the wrong scale.
+    @State private var tokenDecimalsError: String?
 
     /// Monotonic token guarding against a stale late decimals response
     /// overwriting a newer resolution.
@@ -129,8 +134,10 @@ public struct DelegateToAgentScreenCore: View {
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
     @State private var result: DelegationResult?
-    @State private var resultPeriod: DelegatePeriodOption = .oneDay
     @State private var resultExpiry: DelegateExpiryOption = .oneDay
+
+    /// Screen-level snackbar binding for copy confirmations on the result card.
+    @State private var snackbarMessage: SnackbarMessage?
 
     // -------------------------------------------------------------------------
     // MARK: - Dismiss
@@ -167,6 +174,7 @@ public struct DelegateToAgentScreenCore: View {
         }
         .onAppear { prefillToken() }
         .task(id: tokenContract) { await resolveTokenDecimals() }
+        .snackbar($snackbarMessage)
     }
 
     // -------------------------------------------------------------------------
@@ -269,6 +277,9 @@ public struct DelegateToAgentScreenCore: View {
                     .font(Typography.metadata)
                     .foregroundStyle(.tertiary)
             }
+            if let tokenDecimalsError {
+                FieldErrorText(error: tokenDecimalsError)
+            }
         }
     }
 
@@ -352,32 +363,15 @@ public struct DelegateToAgentScreenCore: View {
                 .foregroundStyle(.secondary)
 
                 if let summary = result.summary {
-                    KeyValueRow(label: "Agent Key", value: summary.agentPublicKey, monospace: true)
-                    KeyValueRow(
-                        label: "Scope",
-                        value: "CallContract(\(truncateAddress(summary.tokenContract)))"
-                    )
-                    KeyValueRow(
-                        label: "Cap",
-                        value: "\(summary.amount) \(resultPeriod.label.lowercased())",
-                        emphasised: true
-                    )
-                    KeyValueRow(
-                        label: "Expires",
-                        value: summary.validUntilLedger.map { "Ledger \($0) (\(resultExpiry.label))" } ?? "Never"
-                    )
-                    KeyValueRow(
-                        label: "Verifier",
-                        value: truncateAddress(summary.verifierAddress),
-                        monospace: true
-                    )
-                    KeyValueRow(
-                        label: "Policy",
-                        value: truncateAddress(summary.spendingLimitPolicyAddress),
-                        monospace: true
+                    summaryRows(summary)
+                }
+                KeyValueRow(label: "Tx Hash") {
+                    CopyableValue(
+                        value: result.hash ?? "",
+                        copyConfirmation: "Transaction hash copied",
+                        snackbarMessage: $snackbarMessage
                     )
                 }
-                KeyValueRow(label: "Tx Hash", value: result.hash ?? "", monospace: true)
 
                 LoadingButton("Done", style: .outlinedNeutral) {
                     await MainActor.run { onDone() }
@@ -390,6 +384,55 @@ public struct DelegateToAgentScreenCore: View {
         .listRowBackground(Color.clear)
     }
 
+    /// The authorised-delegation rows on the confirmation card.
+    ///
+    /// Mirrors the cross-platform demo: the agent key, the scoped token contract,
+    /// and the transaction hash are copyable so they can be handed to the
+    /// reference agent (the token contract is `AGENT_TOKEN_CONTRACT`). The cap
+    /// period is rendered from the rule's on-chain `periodLedgers` (via
+    /// ``delegatePeriodLabel(forLedgers:)``) rather than the live picker
+    /// selection, so the card reflects the rolling window written on-chain.
+    @ViewBuilder
+    private func summaryRows(_ summary: DelegationSummary) -> some View {
+        KeyValueRow(label: "Agent Key") {
+            CopyableValue(
+                value: summary.agentPublicKey,
+                copyConfirmation: "Agent key copied",
+                snackbarMessage: $snackbarMessage
+            )
+        }
+        KeyValueRow(label: "Scope", value: "CallContract")
+        KeyValueRow(label: "Token Contract") {
+            CopyableValue(
+                value: summary.tokenContract,
+                copyConfirmation: "Token contract address copied",
+                snackbarMessage: $snackbarMessage
+            )
+        }
+        Text("Start the reference agent with this token contract (AGENT_TOKEN_CONTRACT).")
+            .font(Typography.secondary)
+            .foregroundStyle(.secondary)
+        KeyValueRow(
+            label: "Cap",
+            value: "\(summary.amount) \(delegatePeriodLabel(forLedgers: summary.periodLedgers))",
+            emphasised: true
+        )
+        KeyValueRow(
+            label: "Expires",
+            value: summary.validUntilLedger.map { "Ledger \($0) (\(resultExpiry.label))" } ?? "Never"
+        )
+        KeyValueRow(
+            label: "Verifier",
+            value: truncateAddress(summary.verifierAddress),
+            monospace: true
+        )
+        KeyValueRow(
+            label: "Policy",
+            value: truncateAddress(summary.spendingLimitPolicyAddress),
+            monospace: true
+        )
+    }
+
     // -------------------------------------------------------------------------
     // MARK: - Validation
     // -------------------------------------------------------------------------
@@ -398,6 +441,9 @@ public struct DelegateToAgentScreenCore: View {
         guard !agentKey.trimmingCharacters(in: .whitespaces).isEmpty, agentKeyError == nil else { return false }
         guard !tokenContract.trimmingCharacters(in: .whitespaces).isEmpty, tokenError == nil else { return false }
         guard !amount.trimmingCharacters(in: .whitespaces).isEmpty, amountError == nil else { return false }
+        // Fail closed: a non-native scoped token whose `decimals()` could not be
+        // resolved blocks submission so the cap is never encoded at the wrong scale.
+        guard tokenDecimalsError == nil else { return false }
         return true
     }
 
@@ -415,15 +461,33 @@ public struct DelegateToAgentScreenCore: View {
         }
     }
 
-    /// Resolves the guarded token's decimal scale for the cap conversion.
+    /// Resolves the scoped token's decimal scale for the cap conversion.
     ///
-    /// Native and invalid addresses resolve without a network call; a custom
-    /// token's `decimals()` is fetched on-chain. A monotonic token guards
-    /// against a stale late response overwriting a newer resolution. A failure
-    /// leaves the previous value in place rather than blocking the form.
+    /// The native token resolves to ``nativeTokenDecimals`` without a network
+    /// call; a custom token's `decimals()` is fetched on-chain. A monotonic token
+    /// guards against a stale late response overwriting a newer resolution.
+    ///
+    /// Fails closed: when a non-native custom token's `decimals()` cannot be
+    /// read, ``tokenDecimalsError`` is set (surfaced beneath the token field) and
+    /// the previous scale is left unchanged so the disabled submit button never
+    /// encodes the cap at the wrong scale. The scale is not silently kept as the
+    /// demo token's default for an unresolved custom token.
     private func resolveTokenDecimals() async {
         let token = tokenContract.trimmingCharacters(in: .whitespaces)
+        tokenDecimalsError = nil
         guard !token.isEmpty else { return }
+
+        // The native token has a fixed scale; resolve it without a round trip.
+        guard token != DemoConfig.nativeTokenContract else {
+            tokenDecimals = nativeTokenDecimals
+            return
+        }
+
+        // A malformed address is already reported by the token field validation,
+        // which blocks submit on its own; do not fetch or flag a decimals error
+        // for it so a later valid entry re-triggers resolution cleanly.
+        guard isValidContractAddress(token) else { return }
+
         decimalsRequestToken += 1
         let requestToken = decimalsRequestToken
         do {
@@ -431,7 +495,11 @@ public struct DelegateToAgentScreenCore: View {
             guard requestToken == decimalsRequestToken else { return }
             tokenDecimals = resolved
         } catch {
-            // Non-fatal: keep the current scale; submit surfaces any real error.
+            guard requestToken == decimalsRequestToken else { return }
+            let msg = ActivityLogState.redact(actionableMessage(for: error))
+            tokenDecimalsError =
+                "Could not read token decimals for the scoped contract: \(msg)"
+            activityLog.error("Could not read token decimals: \(msg)")
         }
     }
 
@@ -465,7 +533,6 @@ public struct DelegateToAgentScreenCore: View {
         )
 
         if submitted.success {
-            resultPeriod = period
             resultExpiry = expiry
             result = submitted
             postAccessibilityAnnouncement("Agent authorised")
@@ -487,5 +554,68 @@ public struct DelegateToAgentScreenCore: View {
         )
         flow = newFlow
         return newFlow
+    }
+}
+
+// ============================================================================
+// MARK: - Period formatting
+// ============================================================================
+
+/// Human-readable spending-cap period derived from a rule's on-chain
+/// `periodLedgers` rather than a live picker selection.
+///
+/// Recognises whole-hour and whole-day windows (covering every delegate preset)
+/// and falls back to the raw ledger count for any other value, so the label
+/// always reflects the rolling window actually written on-chain.
+private func delegatePeriodLabel(forLedgers ledgers: UInt32) -> String {
+    let perDay = UInt32(StellarProtocol.ledgersPerDay)
+    let perHour = UInt32(StellarProtocol.ledgersPerHour)
+    if ledgers >= perDay, ledgers.isMultiple(of: perDay) {
+        let days = ledgers / perDay
+        return days == 1 ? "per day" : "per \(days) days"
+    }
+    if ledgers >= perHour, ledgers.isMultiple(of: perHour) {
+        let hours = ledgers / perHour
+        return hours == 1 ? "per hour" : "per \(hours) hours"
+    }
+    return "per \(ledgers) ledgers"
+}
+
+// ============================================================================
+// MARK: - CopyableValue
+// ============================================================================
+
+/// A compact, copyable monospace value for the result card: middle-truncated to
+/// a single line and paired with a copy button that writes the full value to the
+/// clipboard and confirms via the screen snackbar.
+private struct CopyableValue: View {
+
+    let value: String
+    let copyConfirmation: String
+    @Binding var snackbarMessage: SnackbarMessage?
+
+    @Environment(\.clipboard) private var clipboard
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(value)
+                .font(Typography.body.monospaced())
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+                .accessibilityLabel(value)
+            Button {
+                clipboard.copy(value, sensitive: false)
+                snackbarMessage = SnackbarMessage(copyConfirmation)
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.brandPrimary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Copy")
+            .accessibilityHint(copyConfirmation)
+        }
     }
 }

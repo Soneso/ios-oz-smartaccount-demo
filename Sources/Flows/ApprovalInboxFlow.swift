@@ -465,7 +465,7 @@ public final class ApprovalInboxFlow {
         }
 
         // Step 5: report the confirmed hash back so the agent learns the outcome.
-        return await reportApproval(id: request.id, hash: hash)
+        return await reportConfirmedApproval(id: request.id, hash: hash)
     }
 
     /// Re-reports a previously confirmed on-chain approval WITHOUT re-submitting.
@@ -481,40 +481,35 @@ public final class ApprovalInboxFlow {
             activityLog.error(message)
             return ApprovalResult(success: false, error: message)
         }
-
-        do {
-            _ = try await coordination.approve(request.id, resultHash: recordedHash)
-        } catch let error as CoordinationError {
-            if error.statusCode == 409 {
-                // Already resolved server-side: the report is effectively complete.
-                demoState.clearConfirmedApprovalHash(requestId: request.id)
-                activityLog.info("Escalation already resolved on the coordination server. Hash: \(recordedHash)")
-                return ApprovalResult(success: true, hash: recordedHash)
-            }
-            let message = "Reporting the approval failed: \(error.message) " +
-                "(transaction confirmed on-chain: \(recordedHash))"
-            activityLog.error(message)
-            return ApprovalResult(success: false, hash: recordedHash, error: message, confirmedOnChain: true)
-        } catch {
-            let message = ActivityLogState.redact(actionableMessage(for: error))
-            activityLog.error("Reporting the approval failed: \(message)")
-            return ApprovalResult(
-                success: false,
-                hash: recordedHash,
-                error: "\(message) (transaction confirmed on-chain: \(recordedHash))",
-                confirmedOnChain: true
-            )
-        }
-
-        demoState.clearConfirmedApprovalHash(requestId: request.id)
-        activityLog.success("Agent call approved. Hash: \(recordedHash)")
-        return ApprovalResult(success: true, hash: recordedHash)
+        return await reportConfirmedApproval(id: request.id, hash: recordedHash)
     }
 
-    /// Reports a confirmed `hash` back to the coordination server for `id`.
-    private func reportApproval(id: String, hash: String) async -> ApprovalResult {
+    /// Reports a confirmed on-chain `hash` back to the coordination server for
+    /// `id` and clears the dedup entry on success.
+    ///
+    /// The single report-back path shared by the first attempt (after
+    /// ``approveRequest(_:)`` confirms) and the ``retryReport(_:)`` affordance, so
+    /// the two behave identically and never re-submit on-chain. Never calls
+    /// `contractCall`. Outcomes:
+    /// - `2xx`: success; the dedup entry is cleared.
+    /// - `409` (already resolved server-side): treated as success; the report is
+    ///   effectively complete and the dedup entry is cleared.
+    /// - any other failure: returns ``ApprovalResult/confirmedOnChain`` true (the
+    ///   transaction is on-chain) so the inbox offers a retry rather than a second
+    ///   submit; the dedup entry is retained.
+    private func reportConfirmedApproval(id: String, hash: String) async -> ApprovalResult {
         do {
             _ = try await coordination.approve(id, resultHash: hash)
+        } catch let error as CoordinationError where error.statusCode == 409 {
+            // Already resolved server-side: the report is effectively complete.
+            demoState.clearConfirmedApprovalHash(requestId: id)
+            activityLog.info("Escalation already resolved on the coordination server. Hash: \(hash)")
+            return ApprovalResult(success: true, hash: hash)
+        } catch let error as CoordinationError {
+            let message = "Reporting the approval failed: \(error.message) " +
+                "(transaction confirmed on-chain: \(hash))"
+            activityLog.error(message)
+            return ApprovalResult(success: false, hash: hash, error: message, confirmedOnChain: true)
         } catch {
             let message = ActivityLogState.redact(actionableMessage(for: error))
             activityLog.error("Reporting the approval failed: \(message)")
@@ -525,6 +520,7 @@ public final class ApprovalInboxFlow {
                 confirmedOnChain: true
             )
         }
+
         demoState.clearConfirmedApprovalHash(requestId: id)
         activityLog.success("Agent call approved. Hash: \(hash)")
         return ApprovalResult(success: true, hash: hash)

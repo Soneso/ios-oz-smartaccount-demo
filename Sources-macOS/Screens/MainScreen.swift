@@ -99,7 +99,7 @@ struct MainScreen: View {
             await resolvedFlow().initializeKit()
         }
         .task(id: demoState.contractId) {
-            await pollPendingRequestCount()
+            await InboxBadgePoller(demoState: demoState, activityLog: activityLog).run()
         }
         .onChange(of: demoState.kit != nil) { _, hasKit in
             if hasKit {
@@ -171,54 +171,6 @@ struct MainScreen: View {
     private func disconnect() async {
         await resolvedFlow().disconnect()
     }
-
-    // -------------------------------------------------------------------------
-    // MARK: - Inbox bell poller
-    // -------------------------------------------------------------------------
-
-    /// Refreshes the pending agent-escalation count for the toolbar inbox bell
-    /// badge while a wallet is connected.
-    ///
-    /// Restarted whenever the connected account changes (via `.task(id:)`). Polls
-    /// every `pendingPollInterval` seconds and stops when the task is cancelled.
-    /// A failed fetch leaves the previous count in place, and is logged once at
-    /// info level when the failure first appears (de-duplicated so a sustained
-    /// outage does not flood the activity log every interval).
-    private func pollPendingRequestCount() async {
-        guard demoState.isConnected else {
-            demoState.setPendingRequestCount(0)
-            return
-        }
-        let inbox = DemoFlowFactory.makeApprovalInboxFlow(
-            demoState: demoState,
-            activityLog: activityLog
-        )
-        var lastLoggedError: String?
-        while !Task.isCancelled {
-            do {
-                let count = try await inbox.pendingCount()
-                demoState.setPendingRequestCount(count)
-                lastLoggedError = nil
-            } catch {
-                // The badge is best-effort: keep the previous count and keep
-                // polling. Surface the failure at info level, de-duplicated, so a
-                // transient blip is visible without spamming the log every poll.
-                let message = ActivityLogState.redact(actionableMessage(for: error))
-                if message != lastLoggedError {
-                    activityLog.info("Inbox badge refresh paused: \(message)")
-                    lastLoggedError = message
-                }
-            }
-            do {
-                try await Task.sleep(for: .seconds(Self.pendingPollInterval))
-            } catch {
-                return
-            }
-        }
-    }
-
-    /// Seconds between inbox pending-count polls.
-    private static let pendingPollInterval: Double = 8
 
     // -------------------------------------------------------------------------
     // MARK: - Flow Resolution

@@ -30,9 +30,6 @@ public struct DelegationSummary: Sendable, Equatable {
     /// expires.
     public let validUntilLedger: UInt32?
 
-    /// The context-rule name written on-chain.
-    public let ruleName: String
-
     /// The spending-limit policy contract address (C-address).
     public let spendingLimitPolicyAddress: String
 
@@ -45,7 +42,6 @@ public struct DelegationSummary: Sendable, Equatable {
         amount: String,
         periodLedgers: UInt32,
         validUntilLedger: UInt32?,
-        ruleName: String,
         spendingLimitPolicyAddress: String,
         verifierAddress: String
     ) {
@@ -54,7 +50,6 @@ public struct DelegationSummary: Sendable, Equatable {
         self.amount = amount
         self.periodLedgers = periodLedgers
         self.validUntilLedger = validUntilLedger
-        self.ruleName = ruleName
         self.spendingLimitPolicyAddress = spendingLimitPolicyAddress
         self.verifierAddress = verifierAddress
     }
@@ -392,7 +387,6 @@ public final class DelegateToAgentFlow {
                 amount: trimmedAmount,
                 periodLedgers: periodLedgers,
                 validUntilLedger: validUntil,
-                ruleName: ruleName,
                 spendingLimitPolicyAddress: policyAddress,
                 verifierAddress: ed25519VerifierAddress
             )

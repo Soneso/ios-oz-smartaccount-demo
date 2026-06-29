@@ -216,9 +216,9 @@ public final class AgentRunner: @unchecked Sendable {
         let requestId = created.id
         logger.info("Escalation request created: id=\(requestId) (pending).")
 
-        // Half-open range so a non-positive pollMaxAttempts yields an empty loop
-        // (matching the Flutter reference, which skips the body and returns
-        // pending with attempts: 0) instead of trapping on an invalid range.
+        // Half-open range over a non-negative pollMaxAttempts (validateForLiveRun
+        // rejects negatives, which would trap on an invalid range). A value of 0
+        // yields an empty loop and returns pending with attempts: 0.
         for attempt in 0..<config.pollMaxAttempts {
             try await sleep(config.pollInterval)
 

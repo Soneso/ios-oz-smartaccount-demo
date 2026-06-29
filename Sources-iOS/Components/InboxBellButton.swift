@@ -43,12 +43,12 @@ struct InboxBellButton: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .accessibilityLabel(accessibilityLabel)
+        .accessibilityLabel(demoState.inboxAccessibilityLabel)
         .accessibilityHint("Opens the approval inbox.")
     }
 
     private var badge: some View {
-        Text(demoState.pendingRequestCount > 99 ? "99+" : "\(demoState.pendingRequestCount)")
+        Text(demoState.pendingBadgeText)
             .font(.system(size: 10, weight: .bold))
             .foregroundStyle(.white)
             .padding(.horizontal, 4)
@@ -57,11 +57,5 @@ struct InboxBellButton: View {
             .clipShape(Capsule())
             .offset(x: 6, y: -6)
             .accessibilityHidden(true)
-    }
-
-    private var accessibilityLabel: String {
-        let count = demoState.pendingRequestCount
-        if count == 0 { return "Approval inbox" }
-        return "Approval inbox, \(count) pending"
     }
 }

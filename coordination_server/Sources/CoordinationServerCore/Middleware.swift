@@ -75,10 +75,11 @@ struct BearerAuthMiddleware<Context: RequestContext>: RouterMiddleware {
 /// status code, and turns any unexpected error into a `500` without leaking
 /// internals to the client.
 ///
-/// Framework HTTP errors (e.g. an unmatched route's `404` or a wrong-method
-/// `405`, which Hummingbird's router raises as ``HTTPError``) are converted to
-/// the same JSON `{ "error": ... }` shape and returned rather than rethrown, so
-/// they keep flowing back out through the outer CORS and request-log middleware.
+/// Framework HTTP errors (e.g. an unmatched route, or a wrong method on a known
+/// path, both of which Hummingbird's router resolves through its not-found
+/// responder to a `404` raised as ``HTTPError``) are converted to the same JSON
+/// `{ "error": ... }` shape and returned rather than rethrown, so they keep
+/// flowing back out through the outer CORS and request-log middleware.
 /// Rethrowing them would let the framework synthesise the response above those
 /// layers, stripping the CORS headers the web demo needs and skipping the log.
 struct ErrorMappingMiddleware<Context: RequestContext>: RouterMiddleware {
@@ -95,8 +96,6 @@ struct ErrorMappingMiddleware<Context: RequestContext>: RouterMiddleware {
             return HTTPResponses.error(status: .notFound, message: error.message)
         } catch let error as ConflictError {
             return HTTPResponses.error(status: .conflict, message: error.message)
-        } catch let error as StoreFormatError {
-            return HTTPResponses.error(status: .badRequest, message: error.message)
         } catch let error as HTTPError {
             return HTTPResponses.error(
                 status: error.status,
@@ -109,8 +108,15 @@ struct ErrorMappingMiddleware<Context: RequestContext>: RouterMiddleware {
     }
 }
 
-/// Logs one line per request to stdout: timestamp, method, path, status, and
-/// duration in milliseconds.
+/// Logs one line per request to stdout (excluding CORS preflight, which
+/// ``CORSMiddleware`` answers before this layer runs): timestamp, method, path,
+/// status, and duration in milliseconds.
+/// Shared formatter reused across requests instead of allocated per call.
+/// `ISO8601DateFormatter` formatting is thread-safe on Apple platforms, so a
+/// single instance is safe to read from concurrent request handlers. Held at
+/// file scope because a generic type cannot declare a static stored property.
+nonisolated(unsafe) private let requestLogTimestampFormatter = ISO8601DateFormatter()
+
 struct RequestLogMiddleware<Context: RequestContext>: RouterMiddleware {
     func handle(
         _ request: Request,
@@ -122,7 +128,7 @@ struct RequestLogMiddleware<Context: RequestContext>: RouterMiddleware {
         let elapsed = ContinuousClock.now - start
         let millis = elapsed.components.seconds * 1000
             + Int64(Double(elapsed.components.attoseconds) / 1e15)
-        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let timestamp = requestLogTimestampFormatter.string(from: Date())
         print("\(timestamp) \(request.method.rawValue) \(request.uri.path) \(response.status.code) \(millis)ms")
         return response
     }

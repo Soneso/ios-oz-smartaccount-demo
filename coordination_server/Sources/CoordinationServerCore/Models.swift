@@ -4,7 +4,7 @@ import Foundation
 ///
 /// A request is created as ``pending`` and transitions exactly once to either
 /// ``approved`` or ``rejected``. No other transition is permitted.
-public enum RequestStatus: String, Sendable, CaseIterable {
+public enum RequestStatus: String, Sendable {
     case pending
     case approved
     case rejected

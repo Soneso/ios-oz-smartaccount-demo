@@ -56,9 +56,7 @@ public func buildRouter(store: RequestStore, token: String) -> Router<BasicReque
     router.post("/requests/:id/approve") { request, context in
         let id = try requireParameter(context, "id")
         let body = try await readJSONObject(request, allowEmpty: false)
-        guard let resultHash = body["resultHash"] as? String, !resultHash.isEmpty else {
-            throw ValidationError("field 'resultHash' must be a non-empty string")
-        }
+        let resultHash = try JSONField.requireNonEmptyString(body, "resultHash")
         let updated = try await store.approve(id, resultHash: resultHash)
         return HTTPResponses.json(status: .ok, object: updated.jsonObject())
     }

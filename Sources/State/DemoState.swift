@@ -165,21 +165,28 @@ public final class DemoState: ObservableObject {
     /// Confirmed on-chain transaction hashes for approved escalations, keyed by
     /// request id, with an outstanding report-back to the coordination server.
     ///
-    /// This is the durable home of the "never re-submit" guard. The approval
-    /// inbox screen and the bell poller each build their own short-lived
-    /// ``ApprovalInboxFlow`` (the inbox view's flow is recreated whenever the
-    /// `NavigationStack` rebuilds the view), so an in-flow dictionary would be
-    /// lost on navigation and a confirmed-but-unreported escalation could be
-    /// re-submitted a second time. Holding the dedup map on the app-lifetime
-    /// `DemoState` keeps it alive across navigation and shared between every
-    /// flow instance: once an escalation confirms on-chain it is recorded here
-    /// and any later flow consults this map before submitting, routing to the
-    /// idempotent report-back path instead of a duplicate on-chain call.
+    /// Backs the "never re-submit" guard. The approval inbox screen and the bell
+    /// poller each build their own short-lived ``ApprovalInboxFlow`` (the inbox
+    /// view's flow is recreated whenever the `NavigationStack` rebuilds the
+    /// view), so an in-flow dictionary would be lost on navigation and a
+    /// confirmed-but-unreported escalation could be re-submitted a second time.
+    /// Holding the map on the app-lifetime `DemoState` keeps it alive across
+    /// navigation and shared between every flow instance: once an escalation
+    /// confirms on-chain it is recorded here and any later flow consults this map
+    /// before submitting, routing to the idempotent report-back path instead of a
+    /// duplicate on-chain call.
     ///
-    /// Deliberately retained across disconnect so a confirmed-but-unreported
-    /// approval is never forgotten; entries are removed only once the report-back
-    /// to the coordination server succeeds (or the server reports the escalation
-    /// already resolved).
+    /// Scope: process-scoped and in-memory only — this map is NOT persisted. The
+    /// guard holds for the lifetime of the running process, including across
+    /// disconnect (entries are deliberately retained and removed only once the
+    /// report-back succeeds or the server reports the escalation already
+    /// resolved). It does NOT survive a process restart: if the app is killed in
+    /// the window between the on-chain confirmation and a successful report-back
+    /// POST, the escalation is still `pending` on the coordination server while
+    /// the recorded hash is gone on relaunch, so that one call could be
+    /// re-submitted on-chain a second time. The pre-submit `GET /requests/{id}`
+    /// status re-check narrows this window but does not fully close it; persisting
+    /// the map (for example to UserDefaults) would be required to eliminate it.
     private var confirmedApprovalHashes: [String: String] = [:]
 
     // -------------------------------------------------------------------------
@@ -389,6 +396,26 @@ public extension DemoState {
     var isConnected: Bool {
         if case .connected = connectionState { return true }
         return false
+    }
+
+    /// Badge text for the inbox bell: the pending escalation count, capped at
+    /// `"99+"` so the capsule never widens past two glyphs.
+    ///
+    /// Shared by the iOS and macOS bell shells so the cap threshold and the "99+"
+    /// overflow string are defined once.
+    var pendingBadgeText: String {
+        pendingRequestCount > 99 ? "99+" : "\(pendingRequestCount)"
+    }
+
+    /// Accessibility label for the inbox bell, announcing the pending escalation
+    /// count when there is one.
+    ///
+    /// Shared by the iOS and macOS bell shells so the phrasing stays identical on
+    /// both platforms.
+    var inboxAccessibilityLabel: String {
+        pendingRequestCount == 0
+            ? "Approval inbox"
+            : "Approval inbox, \(pendingRequestCount) pending"
     }
 
     /// The external signer manager that multi-signer flows register delegated
