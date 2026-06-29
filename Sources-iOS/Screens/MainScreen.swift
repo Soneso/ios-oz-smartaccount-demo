@@ -96,12 +96,18 @@ struct MainScreen: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             AppBar(title: "Stellar Smart Account Demo", subtitle: "Testnet") {
-                ThemeModeToggle()
+                HStack(spacing: Tokens.cardPadding) {
+                    InboxBellButton(navigationPath: $navigationPath)
+                    ThemeModeToggle()
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)
         .task {
             await resolvedFlow().initializeKit()
+        }
+        .task(id: demoState.contractId) {
+            await InboxBadgePoller(demoState: demoState, activityLog: activityLog).run()
         }
         .onChange(of: demoState.kit != nil) { _, hasKit in
             if hasKit {

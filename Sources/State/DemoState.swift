@@ -143,14 +143,68 @@ public final class DemoState: ObservableObject {
     private var injectedExternalSigners: OZExternalSignerManager?
 
     // -------------------------------------------------------------------------
+    // MARK: - Coordination (agent-signer flow)
+    // -------------------------------------------------------------------------
+
+    /// Client for the coordination server that brokers policy-rejected calls
+    /// between the autonomous reference agent and the approval inbox.
+    ///
+    /// Constructed from ``DemoConfig/coordinationURL`` and
+    /// ``DemoConfig/coordinationToken`` at init, and shared with the approval
+    /// inbox flow and the pending-count poller. Tests inject a fake via
+    /// ``setCoordinationClient(_:)``.
+    public private(set) var coordinationClient: (any CoordinationClientType)?
+
+    /// Number of pending agent escalations for the connected smart account.
+    ///
+    /// Drives the inbox bell badge on the main screen. Refreshed by a poller on
+    /// the main screen and kept in sync by the approval inbox after each load or
+    /// resolution. Zero when no wallet is connected.
+    @Published public private(set) var pendingRequestCount: Int = 0
+
+    /// Confirmed on-chain transaction hashes for approved escalations, keyed by
+    /// request id, with an outstanding report-back to the coordination server.
+    ///
+    /// Backs the "never re-submit" guard. The approval inbox screen and the bell
+    /// poller each build their own short-lived ``ApprovalInboxFlow`` (the inbox
+    /// view's flow is recreated whenever the `NavigationStack` rebuilds the
+    /// view), so an in-flow dictionary would be lost on navigation and a
+    /// confirmed-but-unreported escalation could be re-submitted a second time.
+    /// Holding the map on the app-lifetime `DemoState` keeps it alive across
+    /// navigation and shared between every flow instance: once an escalation
+    /// confirms on-chain it is recorded here and any later flow consults this map
+    /// before submitting, routing to the idempotent report-back path instead of a
+    /// duplicate on-chain call.
+    ///
+    /// Scope: process-scoped and in-memory only — this map is NOT persisted. The
+    /// guard holds for the lifetime of the running process, including across
+    /// disconnect (entries are deliberately retained and removed only once the
+    /// report-back succeeds or the server reports the escalation already
+    /// resolved). It does NOT survive a process restart: if the app is killed in
+    /// the window between the on-chain confirmation and a successful report-back
+    /// POST, the escalation is still `pending` on the coordination server while
+    /// the recorded hash is gone on relaunch, so that one call could be
+    /// re-submitted on-chain a second time. The pre-submit `GET /requests/{id}`
+    /// status re-check narrows this window but does not fully close it; persisting
+    /// the map (for example to UserDefaults) would be required to eliminate it.
+    private var confirmedApprovalHashes: [String: String] = [:]
+
+    // -------------------------------------------------------------------------
     // MARK: - Init
     // -------------------------------------------------------------------------
 
     /// Creates an empty state.
     ///
     /// Platform entry points call the setter methods immediately after init to
-    /// inject providers before the first view appears.
-    public init() {}
+    /// inject providers before the first view appears. The coordination client
+    /// is constructed eagerly from the demo configuration; it depends only on
+    /// compile-time config values, not on platform providers.
+    public init() {
+        coordinationClient = URLSessionCoordinationClient(
+            baseURL: DemoConfig.coordinationURL,
+            token: DemoConfig.coordinationToken
+        )
+    }
 
     // -------------------------------------------------------------------------
     // MARK: - Setters (called by Flows and platform init only)
@@ -242,6 +296,44 @@ public final class DemoState: ObservableObject {
         injectedExternalSigners = manager
     }
 
+    /// Replaces the coordination client.
+    ///
+    /// Production code keeps the client constructed at init. Tests inject a fake
+    /// so the approval inbox and pending-count paths run without a network.
+    public func setCoordinationClient(_ client: (any CoordinationClientType)?) {
+        coordinationClient = client
+    }
+
+    /// Updates the pending agent-escalation count for the inbox bell badge.
+    ///
+    /// Called by the main-screen poller and the approval inbox after each load
+    /// or resolution. Clamped to zero.
+    public func setPendingRequestCount(_ count: Int) {
+        pendingRequestCount = max(0, count)
+    }
+
+    /// Records the confirmed on-chain hash for an approved escalation whose
+    /// report-back is still outstanding.
+    ///
+    /// Called by ``ApprovalInboxFlow`` immediately after a contract call
+    /// confirms, before the report-back POST is attempted. Once recorded, the
+    /// escalation must never be re-submitted on-chain by any flow instance.
+    public func recordConfirmedApprovalHash(requestId: String, hash: String) {
+        confirmedApprovalHashes[requestId] = hash
+    }
+
+    /// Returns the recorded confirmed hash for `requestId`, or `nil` when the
+    /// escalation has not yet confirmed on-chain.
+    public func confirmedApprovalHash(requestId: String) -> String? {
+        confirmedApprovalHashes[requestId]
+    }
+
+    /// Clears the recorded confirmed hash for `requestId` once its report-back
+    /// has succeeded (or the server reports it already resolved).
+    public func clearConfirmedApprovalHash(requestId: String) {
+        confirmedApprovalHashes.removeValue(forKey: requestId)
+    }
+
     /// Transitions to the disconnected state and clears session-scoped data.
     ///
     /// The kit instance and kit event subscription remain in place so the next
@@ -253,6 +345,7 @@ public final class DemoState: ObservableObject {
         connectionState = .disconnected
         xlmBalance = nil
         demoTokenBalance = nil
+        pendingRequestCount = 0
     }
 
     /// Updates the XLM balance display string.
@@ -303,6 +396,26 @@ public extension DemoState {
     var isConnected: Bool {
         if case .connected = connectionState { return true }
         return false
+    }
+
+    /// Badge text for the inbox bell: the pending escalation count, capped at
+    /// `"99+"` so the capsule never widens past two glyphs.
+    ///
+    /// Shared by the iOS and macOS bell shells so the cap threshold and the "99+"
+    /// overflow string are defined once.
+    var pendingBadgeText: String {
+        pendingRequestCount > 99 ? "99+" : "\(pendingRequestCount)"
+    }
+
+    /// Accessibility label for the inbox bell, announcing the pending escalation
+    /// count when there is one.
+    ///
+    /// Shared by the iOS and macOS bell shells so the phrasing stays identical on
+    /// both platforms.
+    var inboxAccessibilityLabel: String {
+        pendingRequestCount == 0
+            ? "Approval inbox"
+            : "Approval inbox, \(pendingRequestCount) pending"
     }
 
     /// The external signer manager that multi-signer flows register delegated

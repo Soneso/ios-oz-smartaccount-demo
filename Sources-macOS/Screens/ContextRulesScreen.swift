@@ -23,7 +23,8 @@ struct ContextRulesScreen: View {
     var body: some View {
         ContextRulesScreenCore(
             onAddRule: { selectedRoute = .contextRuleBuilder },
-            onEditRule: { id in selectedRoute = .contextRuleEditor(id: id) }
+            onEditRule: { id in selectedRoute = .contextRuleEditor(id: id) },
+            onDelegateToAgent: { selectedRoute = .delegateToAgent }
         )
         .macOSContentPane()
         .frame(minWidth: 480)

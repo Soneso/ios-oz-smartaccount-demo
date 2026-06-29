@@ -67,6 +67,10 @@ struct RootView: View {
             KnownSignersScreen()
         case .approve:
             ApproveScreen()
+        case .delegateToAgent:
+            DelegateToAgentScreen()
+        case .approvalInbox:
+            ApprovalInboxScreen()
         }
     }
     // swiftlint:enable cyclomatic_complexity

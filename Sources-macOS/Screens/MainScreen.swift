@@ -58,6 +58,11 @@ struct MainScreen: View {
     @EnvironmentObject private var demoState: DemoState
     @EnvironmentObject private var activityLog: ActivityLogState
 
+    /// Invoked by the toolbar inbox bell to navigate to the approval inbox.
+    /// `nil` when the screen is constructed without a navigation host (e.g.
+    /// previews); the bell is then hidden.
+    var onOpenInbox: (() -> Void)?
+
     @State private var flow: MainScreenFlow?
 
     // -------------------------------------------------------------------------
@@ -83,8 +88,18 @@ struct MainScreen: View {
         .frame(minWidth: Self.minDetailPaneWidth)
         .navigationTitle("Stellar Smart Account Demo")
         .navigationSubtitle("Testnet")
+        .toolbar {
+            if let onOpenInbox {
+                ToolbarItem(placement: .primaryAction) {
+                    InboxBellButton(onOpen: onOpenInbox)
+                }
+            }
+        }
         .task {
             await resolvedFlow().initializeKit()
+        }
+        .task(id: demoState.contractId) {
+            await InboxBadgePoller(demoState: demoState, activityLog: activityLog).run()
         }
         .onChange(of: demoState.kit != nil) { _, hasKit in
             if hasKit {

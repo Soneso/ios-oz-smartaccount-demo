@@ -91,6 +91,10 @@ public struct ContextRulesScreenCore: View {
     /// builder in edit mode. Defaults to a no-op.
     private let onEditRule: (UInt32) -> Void
 
+    /// Called when the user taps `Delegate to Agent`. The hosting shell
+    /// navigates to the `DelegateToAgentScreen`. Defaults to a no-op.
+    private let onDelegateToAgent: () -> Void
+
     // -------------------------------------------------------------------------
     // MARK: - Init
     // -------------------------------------------------------------------------
@@ -103,10 +107,12 @@ public struct ContextRulesScreenCore: View {
     ///     `ContextRuleCard`. Receives the on-chain rule identifier.
     public init(
         onAddRule: @escaping () -> Void = {},
-        onEditRule: @escaping (UInt32) -> Void = { _ in }
+        onEditRule: @escaping (UInt32) -> Void = { _ in },
+        onDelegateToAgent: @escaping () -> Void = {}
     ) {
         self.onAddRule = onAddRule
         self.onEditRule = onEditRule
+        self.onDelegateToAgent = onDelegateToAgent
     }
 
     // -------------------------------------------------------------------------
@@ -267,7 +273,23 @@ public struct ContextRulesScreenCore: View {
                     bottom: Self.actionRowVerticalPadding,
                     trailing: Self.actionRowHorizontalPadding
                 ))
+            delegateToAgentButton
+                .listRowInsets(EdgeInsets(
+                    top: Self.actionRowVerticalPadding,
+                    leading: Self.actionRowHorizontalPadding,
+                    bottom: Self.actionRowVerticalPadding,
+                    trailing: Self.actionRowHorizontalPadding
+                ))
         }
+    }
+
+    private var delegateToAgentButton: some View {
+        LoadingButton("Delegate to Agent", style: .outlined) { @MainActor in
+            onDelegateToAgent()
+        }
+        .disabled(isLoading || removingRuleId != nil)
+        .accessibilityLabel("Delegate to agent")
+        .accessibilityHint("Opens the delegate-to-agent screen to authorise an autonomous agent signer.")
     }
 
     private var addRuleButton: some View {

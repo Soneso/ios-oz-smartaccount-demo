@@ -180,6 +180,46 @@ public enum DemoConfig {
     /// leaves gaps when rules are removed. This cap prevents unbounded iteration
     /// if the on-chain active-rule count diverges from the enumerated IDs.
     public static let maxContextRuleScanId: UInt32 = 25
+
+    // -------------------------------------------------------------------------
+    // MARK: Coordination Server (agent-signer flow)
+    // -------------------------------------------------------------------------
+
+    /// Base URL of the coordination server that brokers policy-rejected calls
+    /// between the autonomous reference agent and the approval inbox.
+    ///
+    /// Defaults to the local development server. Override with the
+    /// `COORDINATION_URL` environment variable (used by macOS runs and tests)
+    /// when pointing the demo at a different host.
+    public static let coordinationURL: String = environmentValue(
+        "COORDINATION_URL",
+        default: "http://localhost:8787"
+    )
+
+    /// Bearer token presented to the coordination server on every `/requests*`
+    /// call. Must match the server's `COORDINATION_TOKEN`.
+    ///
+    /// Defaults to the development token. Override with the `COORDINATION_TOKEN`
+    /// environment variable. This is a testnet-only shared secret with no
+    /// monetary value.
+    public static let coordinationToken: String = environmentValue(
+        "COORDINATION_TOKEN",
+        default: "dev-token-change-me"
+    )
+
+    // -------------------------------------------------------------------------
+    // MARK: Environment overrides
+    // -------------------------------------------------------------------------
+
+    /// Returns the process environment value for `key` when set and non-empty,
+    /// otherwise `fallback`. On device builds the environment is empty, so the
+    /// default is used; tests and macOS runs can inject overrides.
+    private static func environmentValue(_ key: String, default fallback: String) -> String {
+        if let value = ProcessInfo.processInfo.environment[key], !value.isEmpty {
+            return value
+        }
+        return fallback
+    }
 }
 
 // ============================================================================
