@@ -159,14 +159,14 @@ extension ContextRuleBuilderCore {
             return
         }
 
-        // Multi-signer decision: based on original on-chain signers.
-        let onChainSigners = originalSignerEntries.map(\.signer)
-        let needsPicker: Bool
-        if onChainSigners.count > 1 {
-            needsPicker = !isSinglePasskeyOperation(originalSigners: onChainSigners)
-        } else {
-            needsPicker = false
-        }
+        // Multi-signer decision: a context-rule edit is an admin operation
+        // authorized by the wallet's signer set (the default rule governs it),
+        // not by the signers of the rule being edited. Gate on the same
+        // all-rules signer list create mode uses; the edit picker sheet
+        // already offers that list.
+        let needsPicker = createSignersLoaded &&
+            createAvailableSigners.count > 1 &&
+            !isSinglePasskeyTransfer(signersFor: createAvailableSigners)
         if needsPicker {
             showEditSignerPicker = true
             return
