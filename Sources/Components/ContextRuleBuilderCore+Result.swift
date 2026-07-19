@@ -89,6 +89,7 @@ extension ContextRuleBuilderCore {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)
             .modifier(AccessibilityAnnouncementModifier(text: announcement))
+            .id(Self.failureCardAnchor)
         }
     }
 

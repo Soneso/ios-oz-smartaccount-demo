@@ -123,6 +123,7 @@ extension ContextRuleBuilderCore {
         if !errors.isEmpty {
             fieldErrors = errors
             errorMessage = "Please fix the validation errors above."
+            scrollTarget = Self.errorBannerAnchor
             return
         }
         fieldErrors = [:]
@@ -145,6 +146,7 @@ extension ContextRuleBuilderCore {
         if !errors.isEmpty {
             fieldErrors = errors
             errorMessage = "Please fix the validation errors above."
+            scrollTarget = Self.errorBannerAnchor
             return
         }
         fieldErrors = [:]
@@ -153,6 +155,7 @@ extension ContextRuleBuilderCore {
 
         guard let diff = currentEditDiff, !diff.isEmpty else {
             errorMessage = "No changes to apply"
+            scrollTarget = Self.errorBannerAnchor
             return
         }
 

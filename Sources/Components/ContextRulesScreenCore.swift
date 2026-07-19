@@ -63,6 +63,10 @@ public struct ContextRulesScreenCore: View {
     /// the action buttons on every other card while a removal is pending.
     @State private var removingRuleId: UInt32?
 
+    /// Anchor identity of the error section row, used to scroll a removal
+    /// failure into the visible area.
+    private static let errorAnchor = "context-rules-error"
+
     // -------------------------------------------------------------------------
     // MARK: - RemovalContext
     // -------------------------------------------------------------------------
@@ -120,11 +124,23 @@ public struct ContextRulesScreenCore: View {
     // -------------------------------------------------------------------------
 
     public var body: some View {
-        listContainer
-            .task { await loadRules() }
-            .sheet(item: $activeRemoval) { ctx in
-                signerPickerSheet(for: ctx)
-            }
+        ScrollViewReader { proxy in
+            listContainer
+                .task { await loadRules() }
+                .sheet(item: $activeRemoval) { ctx in
+                    signerPickerSheet(for: ctx)
+                }
+                .onChange(of: errorMessage) { _, message in
+                    guard message != nil else { return }
+                    // The error section renders above the rule list; a removal
+                    // failure on a rule far down the list would otherwise land
+                    // outside the viewport. Deferred one runloop so the row is
+                    // laid out before the scroll runs.
+                    Task { @MainActor in
+                        withAnimation { proxy.scrollTo(Self.errorAnchor, anchor: .center) }
+                    }
+                }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -250,6 +266,7 @@ public struct ContextRulesScreenCore: View {
     private func errorSection(message: String) -> some View {
         Section {
             InlineErrorText(message)
+                .id(Self.errorAnchor)
         }
     }
 

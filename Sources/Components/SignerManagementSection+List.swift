@@ -67,6 +67,7 @@ extension SignerManagementSection {
         Text("\(pluralize(signers.count, "signer", "signers")) added")
             .font(Typography.metadata)
             .foregroundStyle(.tertiary)
+            .id(Self.stagedSignersCaptionAnchor)
     }
 
     private func signerRow(
@@ -98,24 +99,22 @@ extension SignerManagementSection {
         )
     }
 
-    @ViewBuilder
     private func removeButton(
         signer: any SmartAccountSignerProtocol,
         index: Int,
         type: String
     ) -> some View {
-        if !isSubmitting {
-            Button {
-                let key = SmartAccountBuilders.getSignerKey(signer: signer)
-                removeSigner(at: index, key: key)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Color.semanticError)
-                    .imageScale(.medium)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(type) signer")
+        Button {
+            let key = SmartAccountBuilders.getSignerKey(signer: signer)
+            removeSigner(at: index, key: key)
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(Color.semanticError)
+                .imageScale(.medium)
         }
+        .buttonStyle(.plain)
+        .disabled(isSubmitting)
+        .accessibilityLabel("Remove \(type) signer")
     }
 
     internal func removeSigner(at index: Int, key: String) {
@@ -142,6 +141,7 @@ extension SignerManagementSection {
             Text("\(pluralize(signerEntries.count, "signer", "signers")) added")
                 .font(Typography.metadata)
                 .foregroundStyle(.tertiary)
+                .id(Self.stagedSignersCaptionAnchor)
         }
     }
 
@@ -187,9 +187,7 @@ extension SignerManagementSection {
         type: String,
         isConnected: Bool
     ) -> some View {
-        if isSubmitting {
-            EmptyView()
-        } else if isConnected {
+        if isConnected {
             Text("You")
                 .font(Typography.metadata)
                 .foregroundStyle(.secondary)
@@ -203,6 +201,7 @@ extension SignerManagementSection {
                     .imageScale(.medium)
             }
             .buttonStyle(.plain)
+            .disabled(isSubmitting)
             .accessibilityLabel("Remove \(type) signer")
         }
     }

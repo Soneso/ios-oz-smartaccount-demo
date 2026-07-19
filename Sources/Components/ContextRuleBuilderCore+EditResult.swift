@@ -46,6 +46,7 @@ extension ContextRuleBuilderCore {
                     text: editAnnouncement(result: result, title: style.title)
                 )
             )
+            .id(Self.editResultCardAnchor)
             if terminal && style.isFull {
                 doneButton
                     .listRowInsets(EdgeInsets(

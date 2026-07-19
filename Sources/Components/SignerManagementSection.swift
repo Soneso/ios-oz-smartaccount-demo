@@ -150,12 +150,19 @@ public struct SignerManagementSection: View {
     // MARK: - Body
     // -------------------------------------------------------------------------
 
+    /// Anchor identity of the "N signer(s) added" caption row that trails the
+    /// staged-signer list. Used as the scroll target after staging a signer: a
+    /// signer's `uniqueKey` also identifies its rows in the reuse list and the
+    /// per-signer weight forms, so scrolling to the key itself would be
+    /// ambiguous; the caption sits directly below the newest staged row and is
+    /// unique.
+    internal static let stagedSignersCaptionAnchor = "staged-signers-caption"
+
     public var body: some View {
         Group {
             currentSignersSection
-            if !isSubmitting {
-                addSignerSection
-            }
+            addSignerSection
+                .disabled(isSubmitting)
         }
     }
 

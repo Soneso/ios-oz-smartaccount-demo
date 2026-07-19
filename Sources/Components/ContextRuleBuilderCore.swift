@@ -139,6 +139,37 @@ public struct ContextRuleBuilderCore: View {
     @State internal var snackbarMessage: SnackbarMessage?
 
     // -------------------------------------------------------------------------
+    // MARK: - Scroll-into-view state
+    // -------------------------------------------------------------------------
+
+    /// Row identity to scroll into the visible area. Set when content appears
+    /// outside the viewport (a failure/edit-result card, or a newly staged
+    /// signer/policy row, whose list renders above the add controls); the
+    /// scroll handler consumes and resets it.
+    @State internal var scrollTarget: String?
+
+    /// Anchor identity of the create-mode failure card row.
+    internal static let failureCardAnchor = "context-rule-failure-card"
+
+    /// Anchor identity of the edit-mode result card row.
+    internal static let editResultCardAnchor = "context-rule-edit-result-card"
+
+    /// Anchor identity of the general error banner row near the top of the
+    /// form. Pre-submit rejections (field validation, empty edit diff) scroll
+    /// here rather than to the first field error, so a user with several
+    /// validation errors starts from the summary and scans down through all
+    /// of them.
+    internal static let errorBannerAnchor = "context-rule-error-banner"
+
+    /// Gates the staged-row scroll triggers to genuine user staging actions.
+    /// The signer/policy collections are also rewritten wholesale by the
+    /// edit-mode initial load and by the post-failure on-chain reload; both
+    /// run while one of these flags is set and must not move the viewport.
+    internal var stagingScrollEnabled: Bool {
+        !isSubmitting && !editSubmitting && !isLoadingRule
+    }
+
+    // -------------------------------------------------------------------------
     // MARK: - Multi-signer state
     // -------------------------------------------------------------------------
 
@@ -220,20 +251,61 @@ public struct ContextRuleBuilderCore: View {
     // -------------------------------------------------------------------------
 
     public var body: some View {
-        formContainer
-            .task { @MainActor in
-                if flow == nil { _ = resolvedFlow() }
-            }
-            .task { await loadAvailableSigners() }
-            .task(id: editRuleId) { await loadRuleIfNeeded() }
-            .task(id: spendingLimitGuardedToken) { await resolveSpendingLimitDecimals() }
-            .sheet(isPresented: $showCreateSignerPicker) {
-                signerPickerSheet
-            }
-            .sheet(isPresented: $showEditSignerPicker) {
-                editSignerPickerSheet
-            }
-            .snackbar($snackbarMessage)
+        ScrollViewReader { proxy in
+            formContainer
+                .task { @MainActor in
+                    if flow == nil { _ = resolvedFlow() }
+                }
+                .task { await loadAvailableSigners() }
+                .task(id: editRuleId) { await loadRuleIfNeeded() }
+                .task(id: spendingLimitGuardedToken) { await resolveSpendingLimitDecimals() }
+                .sheet(isPresented: $showCreateSignerPicker) {
+                    signerPickerSheet
+                }
+                .sheet(isPresented: $showEditSignerPicker) {
+                    editSignerPickerSheet
+                }
+                .snackbar($snackbarMessage)
+                .onChange(of: scrollTarget) { _, target in
+                    guard let target else { return }
+                    // Deferred one runloop so a row inserted in the same state
+                    // transaction is laid out before the scroll runs.
+                    Task { @MainActor in
+                        withAnimation { proxy.scrollTo(target, anchor: .center) }
+                        scrollTarget = nil
+                    }
+                }
+                .onChange(of: submissionResult) { _, result in
+                    if let result, !result.success {
+                        scrollTarget = Self.failureCardAnchor
+                    }
+                }
+                .onChange(of: editSubmitting) { wasSubmitting, isSubmittingNow in
+                    if wasSubmitting, !isSubmittingNow, editResult != nil, !editFullySucceeded {
+                        scrollTarget = Self.editResultCardAnchor
+                    }
+                }
+                .onChange(of: signers.count) { oldCount, newCount in
+                    if stagingScrollEnabled, newCount > oldCount {
+                        scrollTarget = SignerManagementSection.stagedSignersCaptionAnchor
+                    }
+                }
+                .onChange(of: policies.count) { oldCount, newCount in
+                    if stagingScrollEnabled, newCount > oldCount, let added = policies.last {
+                        scrollTarget = added.id
+                    }
+                }
+                .onChange(of: signerEntries.count) { oldCount, newCount in
+                    if stagingScrollEnabled, newCount > oldCount {
+                        scrollTarget = SignerManagementSection.stagedSignersCaptionAnchor
+                    }
+                }
+                .onChange(of: policyEntries.count) { oldCount, newCount in
+                    if stagingScrollEnabled, newCount > oldCount, let added = policyEntries.last {
+                        scrollTarget = added.address
+                    }
+                }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -330,6 +402,7 @@ public struct ContextRuleBuilderCore: View {
         if let msg = errorMessage {
             Section {
                 InlineErrorText(msg)
+                    .id(Self.errorBannerAnchor)
             }
         }
     }

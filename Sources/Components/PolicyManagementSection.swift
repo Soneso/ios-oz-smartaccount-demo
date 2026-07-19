@@ -119,8 +119,9 @@ public struct PolicyManagementSection: View {
     public var body: some View {
         Group {
             currentPoliciesSection
-            if !isSubmitting && currentPolicyCount < OZSmartAccountConstants.maxPolicies {
+            if currentPolicyCount < OZSmartAccountConstants.maxPolicies {
                 addPolicySection
+                    .disabled(isSubmitting)
             }
         }
     }
@@ -252,20 +253,18 @@ public struct PolicyManagementSection: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
-    @ViewBuilder
     private func editPolicyRemoveButton(entry: EditPolicyEntry, index: Int) -> some View {
-        if !isSubmitting {
-            let typeName = entry.info?.name ?? "Policy"
-            Button {
-                onRemoveEntry?(index)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Color.semanticError)
-                    .imageScale(.medium)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(typeName) policy")
+        let typeName = entry.info?.name ?? "Policy"
+        return Button {
+            onRemoveEntry?(index)
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(Color.semanticError)
+                .imageScale(.medium)
         }
+        .buttonStyle(.plain)
+        .disabled(isSubmitting)
+        .accessibilityLabel("Remove \(typeName) policy")
     }
 
     private var emptyPoliciesRow: some View {
@@ -316,19 +315,17 @@ public struct PolicyManagementSection: View {
         )
     }
 
-    @ViewBuilder
     private func policyRemoveButton(policy: StagedPolicy) -> some View {
-        if !isSubmitting {
-            Button {
-                policies.removeAll(where: { $0.id == policy.id })
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Color.semanticError)
-                    .imageScale(.medium)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(policy.info.name) policy")
+        Button {
+            policies.removeAll(where: { $0.id == policy.id })
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(Color.semanticError)
+                .imageScale(.medium)
         }
+        .buttonStyle(.plain)
+        .disabled(isSubmitting)
+        .accessibilityLabel("Remove \(policy.info.name) policy")
     }
 
     internal func policyTypeColor(_ type: String) -> Color {
