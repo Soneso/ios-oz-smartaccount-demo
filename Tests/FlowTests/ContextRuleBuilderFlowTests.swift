@@ -269,6 +269,34 @@ struct AddContextRuleTests {
         #expect(made.manager.lastAddPolicies[threshold.address] != nil)
     }
 
+    @Test("Policy encoding failure aborts the submission before the SDK call")
+    @MainActor
+    func addContextRule_policyEncodingFails_throwsAndAborts() async throws {
+        let made = BuilderFixtures.makeFlow()
+        made.manager.addResult = BuilderFixtures.successTx()
+        let passkey = BuilderFixtures.passkeySigner()
+        let spendingLimit = try #require(knownPolicies.first { $0.type == "spending_limit" })
+        let badEntry = FlowPolicyEntry(
+            address: spendingLimit.address,
+            installSpec: .spendingLimit(amount: "not-a-number", decimals: 7, periodLedgers: 17_280)
+        )
+        do {
+            _ = try await made.flow.addContextRule(
+                contextType: .defaultRule,
+                name: "Bad",
+                validUntil: nil,
+                signers: [passkey],
+                policies: [badEntry],
+                selectedSigners: [],
+                delegatedSecrets: [:]
+            )
+            Issue.record("expected addContextRule to throw")
+        } catch let ContextRuleFlowError.policyEncodingFailed(address, _) {
+            #expect(address == spendingLimit.address)
+        }
+        #expect(made.manager.addCallCount == 0)
+    }
+
     @Test("Multi-signer path registers delegated keypairs and forwards OZSelectedSigner list")
     @MainActor
     func addContextRule_multiSigner_registersKeypairs() async throws {

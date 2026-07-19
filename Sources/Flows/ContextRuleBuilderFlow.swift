@@ -221,8 +221,10 @@ extension ContextRuleFlow {
     ///     any Ed25519 entries included in `selectedSigners`.
     /// - Returns: ``ContextRuleResult`` carrying success / hash / error.
     /// - Throws: ``ContextRuleFlowError/alreadyInProgress`` when reentered,
-    ///   ``SmartAccountWalletException/NotConnected`` when no wallet is connected, or any
-    ///   error thrown by the SDK.
+    ///   ``SmartAccountWalletException/NotConnected`` when no wallet is connected,
+    ///   ``ContextRuleFlowError/policyEncodingFailed(address:reason:)`` when a
+    ///   staged policy's install parameters fail to encode, or any error thrown
+    ///   by the SDK.
     public func addContextRule(
         contextType: OZContextRuleType,
         name: String,
@@ -242,7 +244,7 @@ extension ContextRuleFlow {
 
         activityLog.info("Submitting new context rule...")
 
-        let policiesMap = buildPoliciesMap(policies)
+        let policiesMap = try buildPoliciesMap(policies)
         let built: [OZSelectedSigner]
         do {
             built = try await MultiSignerRegistration.buildSelectedSigners(
@@ -279,7 +281,12 @@ extension ContextRuleFlow {
     // MARK: - Private helpers
     // -------------------------------------------------------------------------
 
-    private func buildPoliciesMap(_ policies: [FlowPolicyEntry]) -> [String: SCValXDR] {
+    /// Converts the staged entries to the address-to-SCVal map the SDK expects.
+    /// Entries without an install spec are skipped (their parameters are
+    /// already installed on-chain); an encoding failure throws
+    /// ``ContextRuleFlowError/policyEncodingFailed(address:reason:)`` so the
+    /// rule is never submitted without a policy the user staged.
+    private func buildPoliciesMap(_ policies: [FlowPolicyEntry]) throws -> [String: SCValXDR] {
         var policiesMap: [String: SCValXDR] = [:]
         for entry in policies {
             guard let spec = entry.installSpec else {
@@ -293,9 +300,10 @@ extension ContextRuleFlow {
             do {
                 policiesMap[entry.address] = try buildInstallParamsScVal(spec: spec)
             } catch {
-                let truncated = truncateAddress(entry.address)
-                let reason = ActivityLogState.redact(error.localizedDescription)
-                activityLog.error("Policy \(truncated) encoding failed: \(reason)")
+                throw ContextRuleFlowError.policyEncodingFailed(
+                    address: entry.address,
+                    reason: ActivityLogState.redact(actionableMessage(for: error))
+                )
             }
         }
         return policiesMap

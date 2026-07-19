@@ -194,9 +194,9 @@ public final class DelegateToAgentFlow {
     /// A comma is rejected rather than silently normalised to a dot: the cap is
     /// encoded by `OZTransactionOperations.amountToBaseUnits`, whose strict
     /// `^-?[0-9]+(\.[0-9]+)?$` grammar accepts only a dot. Normalising here would
-    /// let a comma input pass UI validation and then fail at encoding time —
-    /// exactly the path that must not silently drop the spend cap. Surfacing the
-    /// error keeps the form and the on-chain encoding in agreement.
+    /// let a comma input pass UI validation and then abort at encoding time with
+    /// a generic error. Rejecting it keeps the form and the on-chain encoding in
+    /// agreement and surfaces an immediate field error instead.
     ///
     /// Pure (no actor state) so it is `nonisolated` and callable from any context.
     public nonisolated static func validateAmount(_ value: String) -> String? {
@@ -288,15 +288,15 @@ public final class DelegateToAgentFlow {
 
         // Pre-encode the spending-limit policy on the EXACT string that will be
         // submitted, through the IDENTICAL conversion path `addContextRule` uses
-        // (`buildInstallParamsScVal`). This is the fail-closed contract: the
-        // delegation must NEVER reach the chain with the agent's Ed25519 signer +
-        // token scope but the spend cap silently dropped. Every encoding failure
-        // is a hard validation error here, before any passkey ceremony — a comma
-        // decimal the strict amount grammar rejects, a fractional precision the
-        // token scale cannot represent, or a cap outside the i128 range enforced
-        // by the policy contract. Because the encoding is deterministic, a spec
-        // that encodes here also encodes inside `addContextRule`, so the policy
-        // can never be the one that `buildPoliciesMap` omits.
+        // (`buildInstallParamsScVal`). Every encoding failure is a hard
+        // validation error here, before any passkey ceremony — a comma decimal
+        // the strict amount grammar rejects, a fractional precision the token
+        // scale cannot represent, or a cap outside the i128 range enforced by
+        // the policy contract. `addContextRule` performs the same encoding and
+        // aborts on the same failures before any ceremony, but with a generic
+        // message and only after this flow has built the agent signer and
+        // resolved the expiry; this check turns them into an immediate,
+        // actionable field error.
         let spendingLimitSpec: PolicyInstallSpec = .spendingLimit(
             amount: trimmedAmount,
             decimals: tokenDecimals,

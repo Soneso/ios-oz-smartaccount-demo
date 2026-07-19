@@ -559,6 +559,10 @@ public enum ContextRuleFlowError: Error, Sendable {
     /// Decoding an on-chain SCVal failed (for example when reading the install
     /// parameters of a known policy via ``readPolicyParams(info:ruleId:)``).
     case scValDecodeFailed(reason: String)
+
+    /// Encoding a staged policy's install parameters failed. The submission is
+    /// aborted so the rule is never created without a policy the user staged.
+    case policyEncodingFailed(address: String, reason: String)
 }
 
 extension ContextRuleFlowError: LocalizedError {
@@ -593,6 +597,8 @@ extension ContextRuleFlowError: LocalizedError {
             return "Missing on-chain identifier for \(entity)."
         case .scValDecodeFailed(let reason):
             return "Failed to decode on-chain value: \(reason)."
+        case .policyEncodingFailed(let address, let reason):
+            return "Failed to encode install parameters for policy \(truncateAddress(address)): \(reason)."
         }
     }
 }

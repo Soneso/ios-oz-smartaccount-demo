@@ -74,6 +74,17 @@ struct ErrorUtilsTests {
         #expect(!isUserCancellation(MockNetworkConnectionError()))
     }
 
+    @Test("Flow-typed error with 'cancelled' in embedded user data is not a cancellation")
+    func flowErrorWithCancelledInReasonNotCancellation() {
+        // policyEncodingFailed embeds the user-entered amount in its reason;
+        // the typed short-circuit must win over the substring fallback.
+        let error = ContextRuleFlowError.policyEncodingFailed(
+            address: "CB26VN37RCVNTHJZDEPK6IRO2MMTS3Z2IEO5JD5BINY2OOJ5KKJG7NKY",
+            reason: "Invalid amount: 1cancelled - Amount must be a positive decimal number"
+        )
+        #expect(!isUserCancellation(error))
+    }
+
     @Test("Error overload: empty localizedDescription is not a cancellation")
     func emptyDescriptionNotCancellation() {
         struct EmptyDescError: Error {}

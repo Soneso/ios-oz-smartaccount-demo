@@ -58,7 +58,8 @@ struct DelegateToAgentFlowValidationTests {
         #expect(DelegateToAgentFlow.validateAmount("-5") != nil)
         // A comma is rejected, never normalised to a dot: the on-chain encoding
         // path accepts only a dot, so a normalised comma would pass UI validation
-        // and then silently drop the spend cap at encoding time.
+        // and abort at encoding time with a generic error instead of this
+        // immediate field error.
         #expect(DelegateToAgentFlow.validateAmount("1,5") != nil)
     }
 }

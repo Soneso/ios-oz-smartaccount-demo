@@ -27,6 +27,12 @@ public func isUserCancellation(_ error: Error) -> Bool {
     if error is WebAuthnException.Cancelled {
         return true
     }
+    // Flow-typed errors are never user cancellations. Their descriptions can
+    // embed user-entered data (e.g. an amount string containing "cancelled"),
+    // which the substring fallback would misclassify.
+    if error is ContextRuleFlowError {
+        return false
+    }
     return isUserCancellationByMessage(error.localizedDescription)
 }
 
