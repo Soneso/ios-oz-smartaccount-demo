@@ -38,7 +38,7 @@ configFiles:
 packages:
   stellarsdk:
     url: https://github.com/Soneso/stellar-ios-mac-sdk.git
-    from: 3.6.1
+    from: 3.8.0
   reown-swift:
     url: https://github.com/reown-com/reown-swift
     # 2.2.9 — latest stable verified 2026-05-16
