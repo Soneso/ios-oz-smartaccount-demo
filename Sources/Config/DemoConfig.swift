@@ -138,7 +138,7 @@ public enum DemoConfig {
     /// Empty string disables the indexer: the kit is constructed with
     /// `indexerUrl: nil` and credential-to-contract lookup falls back to the
     /// on-chain scan path.
-    public static let defaultIndexerURL = "https://smart-account-indexer.sdf-ecosystem.workers.dev"
+    public static let defaultIndexerURL = "https://testnet.mercurydata.app/rest/smart-account-indexer"
 
     // -------------------------------------------------------------------------
     // MARK: WebAuthn / Passkey
