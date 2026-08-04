@@ -50,7 +50,7 @@ signer (the step-2 delegation flow).
 
 ## SDK dependency
 
-This package requires the published `stellarsdk` 3.6.1 or later, which provides
+This package requires the published `stellarsdk` 3.8.1 or later, which provides
 `connectToContract` (headless smart-account connect) and the auto-fund
 RPC-visibility poll fix.
 
