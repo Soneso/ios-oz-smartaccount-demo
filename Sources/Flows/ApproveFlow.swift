@@ -482,7 +482,7 @@ public final class ApproveFlow {
             throw ApproveFlowError.invalidSmartAccountAddress(reason: error.localizedDescription)
         }
         guard let baseUnits = baseUnitsFromDecimalAmount(
-            amount.trimmingCharacters(in: .whitespaces),
+            amount.trimmingCharacters(in: .whitespacesAndNewlines),
             decimals: nativeTokenDecimals
         ) else {
             throw ApproveFlowError.invalidAmount
@@ -505,7 +505,7 @@ public final class ApproveFlow {
     /// C-addresses; throws `invalidSpenderAddress` otherwise. Extracted to
     /// keep ``buildApproveArgs(...)`` within the SwiftLint body-length cap.
     private func decodeSpenderAddress(_ spender: String) throws -> SCAddressXDR {
-        let trimmed = spender.trimmingCharacters(in: .whitespaces)
+        let trimmed = spender.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             if trimmed.isValidEd25519PublicKey() {
                 return try SCAddressXDR(accountId: trimmed)

@@ -346,7 +346,7 @@ public final class WalletCreationFlow {
     ///
     /// Throws `WalletCreationError.invalidUsername` if empty after trimming.
     private func validateUsername(_ username: String) throws -> String {
-        let trimmed = username.trimmingCharacters(in: .whitespaces)
+        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw WalletCreationError.invalidUsername(reason: "Username must not be empty.")
         }

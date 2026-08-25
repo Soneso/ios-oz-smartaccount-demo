@@ -87,8 +87,8 @@ extension EditPolicyParamsForm {
     }
 
     internal func handleSpendingLimitChange(params: PolicyParams) {
-        let amount = editAmount.trimmingCharacters(in: .whitespaces)
-        let periodStr = editPeriodDays.trimmingCharacters(in: .whitespaces)
+        let amount = editAmount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let periodStr = editPeriodDays.trimmingCharacters(in: .whitespacesAndNewlines)
         if amount.isEmpty {
             fieldErrors["amount"] = "Amount is required"
             return
@@ -127,7 +127,7 @@ extension EditPolicyParamsForm {
 
     // swiftlint:disable function_body_length cyclomatic_complexity
     internal func handleWeightedThresholdChange(params: PolicyParams) {
-        let trimmed = editWeightedThreshold.trimmingCharacters(in: .whitespaces)
+        let trimmed = editWeightedThreshold.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             fieldErrors["weightedThreshold"] = "Weight threshold is required"
             return
@@ -149,7 +149,7 @@ extension EditPolicyParamsForm {
         var changed = threshold != params.threshold
         for signer in signers {
             let key = SmartAccountBuilders.getSignerKey(signer: signer)
-            let raw = signerWeights[key]?.trimmingCharacters(in: .whitespaces) ?? ""
+            let raw = signerWeights[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             guard let weight = UInt32(raw), weight >= 1 else {
                 perSignerErrors[key] = "Weight is required (positive integer)"
                 continue

@@ -99,7 +99,7 @@ extension ContextRuleBuilderCore {
     private var submitHint: String {
         if isSubmitting { return "Transaction in progress." }
         if !demoState.isConnected { return "Wallet not connected." }
-        if ruleName.trimmingCharacters(in: .whitespaces).isEmpty { return "Form is incomplete." }
+        if ruleName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Form is incomplete." }
         if isEditing {
             if let diff = currentEditDiff, diff.isEmpty {
                 return "No changes to apply."
@@ -186,7 +186,7 @@ extension ContextRuleBuilderCore {
 
     internal func validateEditForm() -> [String: String] {
         var errors: [String: String] = [:]
-        let trimmedName = ruleName.trimmingCharacters(in: .whitespaces)
+        let trimmedName = ruleName.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedName.isEmpty {
             errors["ruleName"] = "Rule name is required"
         } else if trimmedName.utf8.count > ContextRuleBuilderCore.maxRuleNameBytes {
@@ -220,7 +220,7 @@ extension ContextRuleBuilderCore {
 
     private func validateExpiryEdit() -> String? {
         guard expiryModified, hasExpiry else { return nil }
-        let trimmed = expiryLedger.trimmingCharacters(in: .whitespaces)
+        let trimmed = expiryLedger.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == ContextRuleBuilderCore.customExpirySentinel {
             return "Please select an expiry duration"
         }

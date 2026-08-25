@@ -37,12 +37,12 @@ extension SignerManagementSection {
                 .clipShape(RoundedRectangle(cornerRadius: Self.addButtonRadius))
         }
         .buttonStyle(.plain)
-        .disabled(ed25519PubKeyHex.trimmingCharacters(in: .whitespaces).isEmpty)
+        .disabled(ed25519PubKeyHex.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         .accessibilityLabel("Add Ed25519 Signer")
     }
 
     internal func addEd25519() {
-        let hex = ed25519PubKeyHex.trimmingCharacters(in: .whitespaces).lowercased()
+        let hex = ed25519PubKeyHex.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let preError = preCheckEd25519(hex: hex) {
             setError("ed25519PublicKey", preError)
             return

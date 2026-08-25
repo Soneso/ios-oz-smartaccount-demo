@@ -18,7 +18,7 @@ extension ContextRuleBuilderCore {
     /// own decimals when pre-populating the inline editor.
     internal func guardedTokenContract(for parsed: ParsedContextRuleInfo) -> String? {
         guard case .callContract(let address) = parsed.contextType else { return nil }
-        let trimmed = address.trimmingCharacters(in: .whitespaces)
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 
@@ -29,7 +29,7 @@ extension ContextRuleBuilderCore {
     /// bind to a specific token, so the conversion uses native decimals.
     internal var spendingLimitGuardedToken: String? {
         guard contextTypeOption == .callContract else { return nil }
-        let trimmed = contractAddress.trimmingCharacters(in: .whitespaces)
+        let trimmed = contractAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 

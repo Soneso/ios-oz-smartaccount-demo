@@ -37,7 +37,7 @@ extension SignerManagementSection {
         }
         .buttonStyle(.plain)
         .disabled(
-            delegatedAddress.trimmingCharacters(in: .whitespaces).isEmpty
+            delegatedAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || isImportingFromWallet
         )
         .accessibilityLabel("Add Delegated Signer")
@@ -86,7 +86,7 @@ extension SignerManagementSection {
     internal static var addButtonRadius: CGFloat { 10 }
 
     internal func addDelegated() {
-        let trimmed = delegatedAddress.trimmingCharacters(in: .whitespaces)
+        let trimmed = delegatedAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         if let preError = preCheckDelegated(trimmed: trimmed) {
             setError("delegatedAddress", preError)
             return

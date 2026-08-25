@@ -93,7 +93,7 @@ extension PolicyManagementSection {
     }
 
     private var weightedDisabled: Bool {
-        weightedThresholdValue.trimmingCharacters(in: .whitespaces).isEmpty || signers.isEmpty
+        weightedThresholdValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || signers.isEmpty
     }
 
     private func weightRow(for signer: any SmartAccountSignerProtocol) -> some View {
@@ -144,7 +144,7 @@ extension PolicyManagementSection {
     fileprivate static var weightFieldWidth: CGFloat { 80 }
 
     internal func addWeightedThreshold(info: PolicyInfo) {
-        let trimmed = weightedThresholdValue.trimmingCharacters(in: .whitespaces)
+        let trimmed = weightedThresholdValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let threshold = UInt32(trimmed), threshold >= 1 else {
             fieldErrors["weightedThreshold"] = "Must be at least 1"
             return
@@ -165,7 +165,7 @@ extension PolicyManagementSection {
         var pairs: [SignerWeightPair] = []
         for signer in signers {
             let key = SmartAccountBuilders.getSignerKey(signer: signer)
-            guard let raw = signerWeights[key]?.trimmingCharacters(in: .whitespaces),
+            guard let raw = signerWeights[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
                   let weight = UInt32(raw), weight >= 1 else {
                 return .failure("All signers must have a weight >= 1")
             }

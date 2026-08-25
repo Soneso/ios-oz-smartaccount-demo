@@ -264,7 +264,7 @@ public struct DelegateToAgentScreenCore: View {
                 .disabled(isSubmitting)
                 .accessibilityLabel("Token Contract")
                 .onChange(of: tokenContract) { _, newValue in
-                    let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                     tokenError = trimmed.isEmpty || isValidContractAddress(trimmed)
                         ? nil
                         : "Must be a valid Stellar contract (C...) address"
@@ -438,9 +438,12 @@ public struct DelegateToAgentScreenCore: View {
     // -------------------------------------------------------------------------
 
     private var isFormValid: Bool {
-        guard !agentKey.trimmingCharacters(in: .whitespaces).isEmpty, agentKeyError == nil else { return false }
-        guard !tokenContract.trimmingCharacters(in: .whitespaces).isEmpty, tokenError == nil else { return false }
-        guard !amount.trimmingCharacters(in: .whitespaces).isEmpty, amountError == nil else { return false }
+        guard !agentKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              agentKeyError == nil else { return false }
+        guard !tokenContract.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              tokenError == nil else { return false }
+        guard !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              amountError == nil else { return false }
         // Fail closed: a non-native scoped token whose `decimals()` could not be
         // resolved blocks submission so the cap is never encoded at the wrong scale.
         guard tokenDecimalsError == nil else { return false }
@@ -473,7 +476,7 @@ public struct DelegateToAgentScreenCore: View {
     /// encodes the cap at the wrong scale. The scale is not silently kept as the
     /// demo token's default for an unresolved custom token.
     private func resolveTokenDecimals() async {
-        let token = tokenContract.trimmingCharacters(in: .whitespaces)
+        let token = tokenContract.trimmingCharacters(in: .whitespacesAndNewlines)
         tokenDecimalsError = nil
         guard !token.isEmpty else { return }
 
@@ -507,7 +510,7 @@ public struct DelegateToAgentScreenCore: View {
         let flow = resolvedFlow()
         let keyError = flow.validateAgentPublicKey(agentKey)
         let amtError = DelegateToAgentFlow.validateAmount(amount)
-        let trimmedToken = tokenContract.trimmingCharacters(in: .whitespaces)
+        let trimmedToken = tokenContract.trimmingCharacters(in: .whitespacesAndNewlines)
         let tokError: String? = trimmedToken.isEmpty
             ? "Token contract is required"
             : (isValidContractAddress(trimmedToken) ? nil : "Must be a valid Stellar contract (C...) address")
@@ -526,7 +529,7 @@ public struct DelegateToAgentScreenCore: View {
         let submitted = await flow.delegateToAgent(
             agentPublicKey: agentKey,
             tokenContract: trimmedToken,
-            amount: amount.trimmingCharacters(in: .whitespaces),
+            amount: amount.trimmingCharacters(in: .whitespacesAndNewlines),
             periodLedgers: period.ledgers,
             validUntilOffsetLedgers: expiry.offset,
             tokenDecimals: tokenDecimals

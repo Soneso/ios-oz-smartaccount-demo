@@ -402,7 +402,20 @@ public final class MainScreenFlow {
             storage: storage,
             externalWallet: walletAdapter,
             externalEd25519Adapter: ed25519Adapter,
-            maxContextRuleScanId: DemoConfig.maxContextRuleScanId
+            maxContextRuleScanId: DemoConfig.maxContextRuleScanId,
+            // The relayer chain the demo submits through (OpenZeppelin Relayer
+            // Channels) parses the submitted auth XDR with a pre-protocol-27
+            // schema and rejects ADDRESS_V2 entries. Legacy ADDRESS entries stay
+            // valid on-chain, so the kit requests and builds those instead.
+            // Remove this override once the relayer parses protocol-27 XDR.
+            useUpgradedAuth: false,
+            // The external wallet builds the demo connects to are not confirmed
+            // to sign the address-bound preimage
+            // (ENVELOPE_TYPE_SOROBAN_AUTHORIZATION_WITH_ADDRESS), so delegated
+            // wallet entries stay on the legacy ADDRESS credential arm. Flip
+            // this to the SDK default (true) once a wallet is confirmed to sign
+            // the address-bound form.
+            useUpgradedAuthForWalletSigners: false
         )
 
         return OZSmartAccountKit.create(config: config)

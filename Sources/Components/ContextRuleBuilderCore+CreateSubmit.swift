@@ -88,7 +88,7 @@ extension ContextRuleBuilderCore {
     /// branch on the three enum cases.
     private func resolveExpiry() async -> ExpiryResolution {
         guard hasExpiry,
-              let offsetValue = UInt32(expiryLedger.trimmingCharacters(in: .whitespaces)) else {
+              let offsetValue = UInt32(expiryLedger.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             return .skipped
         }
         do {
@@ -115,7 +115,7 @@ extension ContextRuleBuilderCore {
         do {
             let result = try await resolvedFlow().addContextRule(
                 contextType: contextType,
-                name: ruleName.trimmingCharacters(in: .whitespaces),
+                name: ruleName.trimmingCharacters(in: .whitespacesAndNewlines),
                 validUntil: validUntil,
                 signers: signers,
                 policies: flowPolicies,
@@ -153,10 +153,10 @@ extension ContextRuleBuilderCore {
         case .defaultRule:
             return .defaultRule
         case .callContract:
-            let address = contractAddress.trimmingCharacters(in: .whitespaces)
+            let address = contractAddress.trimmingCharacters(in: .whitespacesAndNewlines)
             return .callContract(contractAddress: address)
         case .createContract:
-            let hex = wasmHashHex.trimmingCharacters(in: .whitespaces).lowercased()
+            let hex = wasmHashHex.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard let bytes = data(fromHex: hex) else {
                 throw ContextRuleFlowError.invalidContextType(reason: "Invalid WASM hash hex")
             }

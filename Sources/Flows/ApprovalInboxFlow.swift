@@ -543,7 +543,7 @@ public final class ApprovalInboxFlow {
     /// An empty or whitespace-only note is sent as no note. Returns a
     /// ``RejectionResult``; on failure ``RejectionResult/error`` is sanitised.
     public func rejectRequest(_ request: CoordinationRequest, note: String?) async -> RejectionResult {
-        let trimmed = note?.trimmingCharacters(in: .whitespaces)
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
         let effectiveNote = (trimmed?.isEmpty ?? true) ? nil : trimmed
         do {
             _ = try await coordination.reject(request.id, note: effectiveNote)

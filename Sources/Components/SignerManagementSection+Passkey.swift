@@ -238,7 +238,7 @@ extension SignerManagementSection {
         isRegistering ||
         isLoadingPasskeys ||
         isSubmitting ||
-        newPasskeyName.trimmingCharacters(in: .whitespaces).isEmpty
+        newPasskeyName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Vertical padding inside the outlined "Add" reuse-passkey row button.
@@ -269,7 +269,7 @@ extension SignerManagementSection {
 
     @MainActor
     internal func registerPasskey() async {
-        let name = newPasskeyName.trimmingCharacters(in: .whitespaces)
+        let name = newPasskeyName.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { return }
         isRegistering = true
         defer { isRegistering = false }

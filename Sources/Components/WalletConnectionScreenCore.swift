@@ -241,7 +241,7 @@ public struct WalletConnectionScreenCore: View { // swiftlint:disable:this type_
     /// with red on first focus; surfaces the format hint once any text has been
     /// entered that does not satisfy the C-address shape.
     private var liveAddressFieldError: String? {
-        let trimmed = contractAddressInput.trimmingCharacters(in: .whitespaces)
+        let trimmed = contractAddressInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if isValidContractAddress(trimmed) { return nil }
         return "Must be a valid Stellar contract address (C...)"
@@ -402,7 +402,7 @@ public struct WalletConnectionScreenCore: View { // swiftlint:disable:this type_
         activeConnection = .address
         defer { activeConnection = nil }
         let result = try await resolvedFlow().connectWithAddress(
-            contractAddress: contractAddressInput.trimmingCharacters(in: .whitespaces)
+            contractAddress: contractAddressInput.trimmingCharacters(in: .whitespacesAndNewlines)
         )
         handleResult(
             result,

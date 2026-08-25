@@ -478,7 +478,7 @@ final class SignerPickerModel: ObservableObject {
         guard let delegated = rows[index].signer as? DelegatedSigner else {
             return "Internal error: row is not a delegated signer."
         }
-        let trimmed = secret.trimmingCharacters(in: .whitespaces)
+        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return "Secret key is required for this signer." }
         if !trimmed.isValidEd25519SecretSeed() { return "Must be a valid Stellar secret key (S...)." }
         let derivedAddress: String
@@ -559,7 +559,7 @@ final class SignerPickerModel: ObservableObject {
         guard let identity = rows[index].ed25519SignerIdentity else {
             return "Internal error: could not read signer identity."
         }
-        let trimmed = secret.trimmingCharacters(in: .whitespaces)
+        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return "Secret key is required for this signer." }
 
         let badSecretMessage = "Secret key must be \(SmartAccountConstants.ed25519SecretSeedSize * 2) hex characters (\(SmartAccountConstants.ed25519SecretSeedSize) bytes)."
@@ -1355,7 +1355,7 @@ private struct SecretKeyInputForm: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-                .disabled(isValidating || secret.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(isValidating || secret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
             if let error {

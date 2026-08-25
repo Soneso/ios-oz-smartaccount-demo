@@ -15,7 +15,7 @@ extension ContextRuleBuilderCore {
     /// state. An empty result means the form is ready to submit.
     internal func validateForm() -> [String: String] {
         var errors: [String: String] = [:]
-        let trimmedName = ruleName.trimmingCharacters(in: .whitespaces)
+        let trimmedName = ruleName.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedName.isEmpty {
             errors["ruleName"] = "Rule name is required"
         } else if trimmedName.utf8.count > ContextRuleBuilderCore.maxRuleNameBytes {
@@ -39,7 +39,7 @@ extension ContextRuleBuilderCore {
         case .defaultRule:
             return nil
         case .callContract:
-            let address = contractAddress.trimmingCharacters(in: .whitespaces)
+            let address = contractAddress.trimmingCharacters(in: .whitespacesAndNewlines)
             if address.isEmpty || !isValidContractAddress(address) {
                 return ["contractAddress": "A contract must be selected"]
             }
@@ -50,7 +50,7 @@ extension ContextRuleBuilderCore {
     }
 
     private func validateWasmHash() -> [String: String]? {
-        let hex = wasmHashHex.trimmingCharacters(in: .whitespaces).lowercased()
+        let hex = wasmHashHex.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if hex.isEmpty {
             return ["wasmHash": "WASM hash is required"]
         }
@@ -65,7 +65,7 @@ extension ContextRuleBuilderCore {
 
     private func validateExpiry() -> String? {
         guard hasExpiry else { return nil }
-        let trimmed = expiryLedger.trimmingCharacters(in: .whitespaces)
+        let trimmed = expiryLedger.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == ContextRuleBuilderCore.customExpirySentinel {
             return "Please select an expiry duration"
         }

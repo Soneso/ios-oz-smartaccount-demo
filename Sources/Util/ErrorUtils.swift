@@ -108,10 +108,10 @@ public func actionableMessage(for error: Error) -> String {
 ///
 /// - Parameter input: The raw string from user input or a stored value.
 public func isValidContractAddress(_ input: String) -> Bool {
-    input.trimmingCharacters(in: .whitespaces).isValidContractId()
+    input.trimmingCharacters(in: .whitespacesAndNewlines).isValidContractId()
 }
 
 /// Returns true if `input` is a non-blank, non-whitespace-only string.
 public func isNonBlank(_ input: String) -> Bool {
-    !input.trimmingCharacters(in: .whitespaces).isEmpty
+    !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 }

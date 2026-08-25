@@ -252,7 +252,7 @@ extension ContextRuleBuilderCore {
 
     @MainActor
     internal func computeEditDiff(ruleId: UInt32) -> ContextRuleEditDiff {
-        let trimmedName = ruleName.trimmingCharacters(in: .whitespaces)
+        let trimmedName = ruleName.trimmingCharacters(in: .whitespacesAndNewlines)
         let nameChanged = trimmedName != originalName
         let newSigners = signerEntries.filter { !$0.isOriginal }
         let removedSigners = originalSignerEntries.filter { orig in
@@ -282,7 +282,7 @@ extension ContextRuleBuilderCore {
     @MainActor
     private func resolveEditDiffExpiry() -> UInt32? {
         guard expiryModified, hasExpiry else { return nil }
-        let trimmed = expiryLedger.trimmingCharacters(in: .whitespaces)
+        let trimmed = expiryLedger.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == Self.customExpirySentinel {
             // Surface as nil so the validator can gate the submission — never
             // silently fall back to the existing on-chain ledger value, which

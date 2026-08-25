@@ -49,7 +49,7 @@ extension PolicyManagementSection {
 
     @ViewBuilder
     private var spendingLimitHelperText: some View {
-        let trimmed = spendingLimitPeriodDays.trimmingCharacters(in: .whitespaces)
+        let trimmed = spendingLimitPeriodDays.trimmingCharacters(in: .whitespacesAndNewlines)
         if let days = Int(trimmed), days > 0 {
             Text("\(pluralize(days, "day", "days")) = \(days * StellarProtocol.ledgersPerDay) ledgers")
                 .font(Typography.metadata)
@@ -88,14 +88,14 @@ extension PolicyManagementSection {
     internal static var addButtonRadius: CGFloat { 10 }
 
     private var spendingLimitDisabled: Bool {
-        spendingLimitAmount.trimmingCharacters(in: .whitespaces).isEmpty ||
-        spendingLimitPeriodDays.trimmingCharacters(in: .whitespaces).isEmpty ||
+        spendingLimitAmount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        spendingLimitPeriodDays.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         spendingLimitDecimalsError != nil
     }
 
     internal func addSpendingLimit(info: PolicyInfo) {
-        let amountStr = spendingLimitAmount.trimmingCharacters(in: .whitespaces)
-        let periodStr = spendingLimitPeriodDays.trimmingCharacters(in: .whitespaces)
+        let amountStr = spendingLimitAmount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let periodStr = spendingLimitPeriodDays.trimmingCharacters(in: .whitespacesAndNewlines)
         if !isPositiveDecimal(amountStr) {
             fieldErrors["spendingAmount"] = "Must be a positive number"
             return

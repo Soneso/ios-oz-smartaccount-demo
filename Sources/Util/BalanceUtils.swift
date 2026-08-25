@@ -37,7 +37,7 @@ public let nativeTokenDecimals: Int = 7
 public func baseUnitsFromDecimalAmount(_ value: String, decimals: Int) -> String? {
     guard decimals >= 0 else { return nil }
     let normalised = value
-        .trimmingCharacters(in: .whitespaces)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
         .replacingOccurrences(of: ",", with: ".")
     return try? OZTransactionOperations.amountToBaseUnits(normalised, decimals: decimals)
 }

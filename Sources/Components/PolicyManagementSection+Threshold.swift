@@ -41,12 +41,12 @@ extension PolicyManagementSection {
                 .clipShape(RoundedRectangle(cornerRadius: Self.addButtonRadius))
         }
         .buttonStyle(.plain)
-        .disabled(thresholdValue.trimmingCharacters(in: .whitespaces).isEmpty)
+        .disabled(thresholdValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         .accessibilityLabel("Add Threshold Policy")
     }
 
     internal func addThreshold(info: PolicyInfo) {
-        let trimmed = thresholdValue.trimmingCharacters(in: .whitespaces)
+        let trimmed = thresholdValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let value = UInt32(trimmed), value >= 1, value <= 15 else {
             fieldErrors["threshold"] = "Must be between 1 and 15"
             return

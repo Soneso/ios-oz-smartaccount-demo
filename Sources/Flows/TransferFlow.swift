@@ -329,7 +329,8 @@ public final class TransferFlow {
         isTransferring = true
         defer { isTransferring = false }
 
-        let recipientDisplay = recipient.isValidContractId()
+        let trimmedRecipient = recipient.trimmingCharacters(in: .whitespacesAndNewlines)
+        let recipientDisplay = trimmedRecipient.isValidContractId()
             ? truncateContractAddress(recipient)
             : truncateAddress(recipient)
         activityLog.info("Transferring \(amount) \(tokenLabel) to \(recipientDisplay)...")
@@ -422,7 +423,8 @@ public final class TransferFlow {
     /// Logs a human-readable intent message for a multi-signer transfer.
     private func logMultiSignerIntent(amount: String, tokenLabel: String, recipient: String, count: Int) {
         let suffix = count == 1 ? "1 signer" : "\(count) signers"
-        let display = recipient.isValidContractId()
+        let trimmedRecipient = recipient.trimmingCharacters(in: .whitespacesAndNewlines)
+        let display = trimmedRecipient.isValidContractId()
             ? truncateContractAddress(recipient)
             : truncateAddress(recipient)
         activityLog.info("Multi-signer transfer: \(amount) \(tokenLabel) to \(display)... (\(suffix))")

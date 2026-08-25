@@ -153,8 +153,8 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
     private var amountError: String? { validateAmount(amount) }
 
     private var isFormValid: Bool {
-        !spender.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !amount.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !spender.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         spenderError == nil &&
         amountError == nil &&
         demoState.demoTokenContractId != nil
@@ -413,7 +413,7 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
 
             FieldErrorText(error: spenderError)
 
-            if spender.trimmingCharacters(in: .whitespaces).isEmpty && spenderError == nil {
+            if spender.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && spenderError == nil {
                 Text("Address to grant the allowance to")
                     .font(Typography.metadata)
                     .foregroundStyle(.tertiary)
@@ -781,8 +781,8 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
             errorMessage = "DEMO token contract is not available."
             return
         }
-        let trimmedSpender = spender.trimmingCharacters(in: .whitespaces)
-        let trimmedAmount = amount.trimmingCharacters(in: .whitespaces)
+        let trimmedSpender = spender.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
         activityLog.info(
             "Approving \(trimmedAmount) DEMO for \(spenderPrefix(trimmedSpender))..."
         )
@@ -815,8 +815,8 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
             errorMessage = "DEMO token contract is not available."
             return
         }
-        let trimmedSpender = spender.trimmingCharacters(in: .whitespaces)
-        let trimmedAmount = amount.trimmingCharacters(in: .whitespaces)
+        let trimmedSpender = spender.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
         let theFlow = resolvedFlow()
         if theFlow.isSinglePasskeyApproval(chosenSigners) {
             await executeSingleSignerApprove()
@@ -940,7 +940,7 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
     // -------------------------------------------------------------------------
 
     private func validateSpender(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if !trimmed.isValidEd25519PublicKey() && !isValidContractAddress(trimmed) {
             return "Must be a valid Stellar account (G...) or contract (C...) address"
@@ -949,7 +949,7 @@ public struct ApproveScreenCore: View { // swiftlint:disable:this type_body_leng
     }
 
     private func validateAmount(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if trimmed.lowercased().contains("e") {
             return "Scientific notation is not supported"

@@ -215,13 +215,13 @@ public struct ContextRuleBuilderCore: View {
             let diff = currentEditDiff
             return demoState.isConnected &&
                 !isSubmitting &&
-                !ruleName.trimmingCharacters(in: .whitespaces).isEmpty &&
+                !ruleName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                 !editFullySucceeded &&
                 !(diff?.isEmpty ?? true)
         }
         return demoState.isConnected &&
             !isSubmitting &&
-            !ruleName.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !ruleName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !signers.isEmpty &&
             !createdSuccessfully
     }

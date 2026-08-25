@@ -358,6 +358,8 @@ private extension DemoTokenService {
         transaction: Transaction,
         server: SorobanServer
     ) async throws -> SimulateTransactionResponse {
+        // This direct-RPC path submits with the admin keypair as source and never
+        // goes through the relayer, so it keeps the SDK's upgraded-auth default.
         let request = SimulateTransactionRequest(transaction: transaction)
         let result = await server.simulateTransaction(simulateTxRequest: request)
         switch result {

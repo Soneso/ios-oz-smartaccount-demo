@@ -174,7 +174,7 @@ public final class DelegateToAgentFlow {
     /// string otherwise. The agent emits its public key as raw 64-character hex,
     /// so the screen accepts the same representation.
     public func validateAgentPublicKey(_ value: String) -> String? {
-        let raw = value.trimmingCharacters(in: .whitespaces).lowercased()
+        let raw = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if raw.isEmpty { return nil }
         if raw.count != 64 {
             return "Must be 64 hex characters (32 bytes), got \(raw.count)"
@@ -201,7 +201,7 @@ public final class DelegateToAgentFlow {
     /// Pure (no actor state) so it is `nonisolated` and callable from any context.
     public nonisolated static func validateAmount(_ value: String) -> String? {
         if value.isEmpty { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.lowercased().contains("e") {
             return "Scientific notation is not supported"
         }
@@ -274,7 +274,7 @@ public final class DelegateToAgentFlow {
         isSubmitting = true
         defer { isSubmitting = false }
 
-        let trimmedKey = agentPublicKey.trimmingCharacters(in: .whitespaces).lowercased()
+        let trimmedKey = agentPublicKey.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard trimmedKey.count == 64, trimmedKey.allSatisfy(\.isHexDigit),
               let agentKeyBytes = data(fromHex: trimmedKey) else {
             return DelegationResult(
@@ -283,8 +283,8 @@ public final class DelegateToAgentFlow {
             )
         }
 
-        let trimmedToken = tokenContract.trimmingCharacters(in: .whitespaces)
-        let trimmedAmount = amount.trimmingCharacters(in: .whitespaces)
+        let trimmedToken = tokenContract.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Pre-encode the spending-limit policy on the EXACT string that will be
         // submitted, through the IDENTICAL conversion path `addContextRule` uses

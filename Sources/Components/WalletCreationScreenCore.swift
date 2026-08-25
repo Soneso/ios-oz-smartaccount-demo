@@ -256,7 +256,7 @@ public struct WalletCreationScreenCore: View { // swiftlint:disable:this type_bo
     /// section renders no footer until the user has had a chance to type.
     private var usernameFooterError: String? {
         guard usernameTouched else { return nil }
-        guard username.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        guard username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         return "Username must not be empty."
     }
 

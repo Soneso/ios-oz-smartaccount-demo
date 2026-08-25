@@ -198,11 +198,12 @@ struct ErrorUtilsTests {
         #expect(!isNonBlank(""))
     }
 
-    @Test("Spaces-and-tabs-only string is blank")
+    @Test("Whitespace-only string is blank")
     func whitespaceIsBlank() {
-        // isNonBlank trims with .whitespaces (spaces and horizontal tabs).
-        // A string containing only spaces and tabs is blank after trimming.
+        // isNonBlank trims with .whitespacesAndNewlines, so a string containing
+        // only spaces, tabs and line breaks is blank after trimming.
         #expect(!isNonBlank("   \t  "))
+        #expect(!isNonBlank(" \n\t\r\n "))
     }
 
     @Test("String with only one non-whitespace char is non-blank")

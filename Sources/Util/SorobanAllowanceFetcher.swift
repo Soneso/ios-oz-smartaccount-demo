@@ -83,7 +83,7 @@ public struct SorobanAllowanceFetcher: AllowanceFetcherType, Sendable {
         smartAccountContractId: String,
         spenderAddress: String
     ) throws -> Transaction {
-        let trimmedSpender = spenderAddress.trimmingCharacters(in: .whitespaces)
+        let trimmedSpender = spenderAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         let spenderAddr: SCAddressXDR = try trimmedSpender.isValidEd25519PublicKey()
             ? SCAddressXDR(accountId: trimmedSpender)
             : SCAddressXDR(contractId: trimmedSpender)

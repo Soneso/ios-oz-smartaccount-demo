@@ -118,8 +118,8 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
     }
 
     private var isFormValid: Bool {
-        !recipient.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !amount.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !recipient.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         recipientError == nil &&
         amountError == nil &&
         (selectedToken == .xlm || demoState.demoTokenContractId != nil)
@@ -358,7 +358,7 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
     private var recipientFooter: some View {
         if let error = recipientError {
             FieldErrorText(error: error)
-        } else if recipient.trimmingCharacters(in: .whitespaces).isEmpty {
+        } else if recipient.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Text("Stellar account (G...) or contract (C...) address")
                 .font(Typography.metadata)
                 .foregroundStyle(.tertiary)
@@ -394,7 +394,7 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
     private var amountFooter: some View {
         if let error = amountError {
             FieldErrorText(error: error)
-        } else if amount.trimmingCharacters(in: .whitespaces).isEmpty {
+        } else if amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Text("Amount to transfer")
                 .font(Typography.metadata)
                 .foregroundStyle(.tertiary)
@@ -583,8 +583,8 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
         do {
             let result = try await resolvedFlow().transfer(
                 tokenContract: tokenContract,
-                recipient: recipient.trimmingCharacters(in: .whitespaces),
-                amount: amount.trimmingCharacters(in: .whitespaces),
+                recipient: recipient.trimmingCharacters(in: .whitespacesAndNewlines),
+                amount: amount.trimmingCharacters(in: .whitespacesAndNewlines),
                 tokenLabel: selectedToken.tokenLabel
             )
             transferResult = result
@@ -607,8 +607,8 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
             do {
                 let result = try await theFlow.multiSignerTransfer(
                     tokenContract: tokenContract,
-                    recipient: recipient.trimmingCharacters(in: .whitespaces),
-                    amount: amount.trimmingCharacters(in: .whitespaces),
+                    recipient: recipient.trimmingCharacters(in: .whitespacesAndNewlines),
+                    amount: amount.trimmingCharacters(in: .whitespacesAndNewlines),
                     tokenLabel: selectedToken.tokenLabel,
                     chosenSigners: chosenSigners,
                     delegatedSecrets: delegatedSecrets,
@@ -650,7 +650,7 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
     // -------------------------------------------------------------------------
 
     private func validateRecipient(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if !trimmed.isValidEd25519PublicKey() && !isValidContractAddress(trimmed) {
             return "Must be a valid Stellar account (G...) or contract (C...) address"
@@ -662,7 +662,7 @@ public struct TransferScreenCore<TokenPickerContent: View & Sendable>: View { //
     }
 
     private func validateAmount(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if trimmed.lowercased().contains("e") {
             return "Scientific notation is not supported"
