@@ -7,7 +7,7 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/Soneso/stellar-ios-mac-sdk.git", from: "3.10.0")
+        .package(url: "https://github.com/Soneso/stellar-ios-mac-sdk.git", from: "3.11.0")
     ],
     targets: [
         // Library carrying all agent logic so the orchestration is unit-testable
