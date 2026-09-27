@@ -31,7 +31,7 @@ device by hand.
 - **SDK version.** This flow uses headless `connectToContract` and the
   auto-fund RPC-visibility polling, which require `stellar-ios-mac-sdk` 3.6.1 or
   newer. The app (`project.yml`) and the `reference_agent` package depend on a
-  published `stellarsdk` version (`from: 3.11.0`); the coordination server depends
+  published `stellarsdk` version (`from: 3.12.0`); the coordination server depends
   only on Hummingbird. No local override is needed.
 
 Build commands for reference:
