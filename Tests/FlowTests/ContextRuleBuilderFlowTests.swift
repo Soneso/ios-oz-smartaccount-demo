@@ -13,6 +13,39 @@ import stellarsdk
 import Testing
 
 // ============================================================================
+// MARK: - buildCreateContractExternalRefContextType tests
+// ============================================================================
+
+@Suite("ContextRuleFlow: buildCreateContractExternalRefContextType")
+struct BuildExternalRefContextTypeTests {
+
+    static let owner = "CAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSBFLM"
+
+    @Test("Builds the context type for the trimmed owner and the tag as entered")
+    @MainActor
+    func buildsTrimmedOwnerAndTag() throws {
+        let made = BuilderFixtures.makeFlow()
+        let type = try made.flow.buildCreateContractExternalRefContextType(
+            owner: " \(Self.owner)\n",
+            tag: "account-v1"
+        )
+        #expect(type == .createContractExternalRef(owner: Self.owner, tag: "account-v1"))
+    }
+
+    @Test("An account address as owner throws InvalidAddress")
+    @MainActor
+    func accountOwnerThrows() {
+        let made = BuilderFixtures.makeFlow()
+        #expect(throws: SmartAccountValidationException.InvalidAddress.self) {
+            _ = try made.flow.buildCreateContractExternalRefContextType(
+                owner: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+                tag: "account-v1"
+            )
+        }
+    }
+}
+
+// ============================================================================
 // MARK: - resolveAbsoluteLedger tests
 // ============================================================================
 

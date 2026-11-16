@@ -65,6 +65,7 @@ public func signerDisplayIdentifier(for signer: any OZSmartAccountSigner) -> Str
 /// - `defaultRule` → `"Default (Any Operation)"`
 /// - `callContract` → `"Call Contract: <truncated address>"`
 /// - `createContract` → `"Create Contract: <first 8 hex chars>..."`
+/// - `createContractExternalRef` → `"Create Contract from Ref: <truncated owner> / <tag>"`
 public func contextTypeLabel(for type: OZContextRuleType) -> String {
     switch type {
     case .defaultRule:
@@ -75,6 +76,8 @@ public func contextTypeLabel(for type: OZContextRuleType) -> String {
     case .createContract(let wasmHash):
         let hexWasm = hexString(from: wasmHash)
         return "Create Contract: \(hexWasm.prefix(8))..."
+    case .createContractExternalRef(let owner, let tag):
+        return "Create Contract from Ref: \(truncateAddress(owner)) / \(tag)"
     }
 }
 

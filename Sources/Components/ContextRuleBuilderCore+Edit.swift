@@ -51,16 +51,12 @@ extension ContextRuleBuilderCore {
     private func applyParsedRuleScalars(parsed: ParsedContextRuleInfo) {
         ruleName = parsed.name
         originalName = parsed.name
-        switch parsed.contextType {
-        case .defaultRule:
-            contextTypeOption = .defaultRule
-        case .callContract(let address):
-            contextTypeOption = .callContract
-            contractAddress = address
-        case .createContract(let wasm):
-            contextTypeOption = .createContract
-            wasmHashHex = hexString(from: wasm)
-        }
+        let fields = Self.contextTypeFormFields(for: parsed.contextType)
+        contextTypeOption = fields.option
+        contractAddress = fields.contractAddress
+        wasmHashHex = fields.wasmHashHex
+        refOwner = fields.refOwner
+        refTag = fields.refTag
         if let validUntil = parsed.validUntil {
             hasExpiry = true
             existingExpiryLedger = validUntil
@@ -70,6 +66,22 @@ extension ContextRuleBuilderCore {
         }
         expiryLedger = ""
         expiryModified = false
+    }
+
+    /// Context type section values for a rule loaded for editing: the option
+    /// matching `type` and the fields that option shows; the other fields are
+    /// empty.
+    internal static func contextTypeFormFields(for type: OZContextRuleType) -> ContextTypeFormFields {
+        switch type {
+        case .defaultRule:
+            return ContextTypeFormFields(option: .defaultRule)
+        case .callContract(let address):
+            return ContextTypeFormFields(option: .callContract, contractAddress: address)
+        case .createContract(let wasm):
+            return ContextTypeFormFields(option: .createContract, wasmHashHex: hexString(from: wasm))
+        case .createContractExternalRef(let owner, let tag):
+            return ContextTypeFormFields(option: .createContractExternalRef, refOwner: owner, refTag: tag)
+        }
     }
 
     @MainActor
@@ -95,13 +107,15 @@ extension ContextRuleBuilderCore {
     ) async {
         var loaded: [EditPolicyEntry] = []
         loaded.reserveCapacity(parsed.policies.count)
+        let guardedToken = guardedTokenContract(for: parsed)
         for (index, address) in parsed.policies.enumerated() {
-            let entry = await buildEditPolicyEntry(
+            let entry = await Self.makeEditPolicyEntry(
                 address: address,
                 index: index,
-                parsed: parsed,
-                flow: flow
-            )
+                parsed: parsed
+            ) { info in
+                await flow.readPolicyParams(info: info, ruleId: parsed.id, guardedToken: guardedToken)
+            }
             loaded.append(entry)
         }
         policyEntries = loaded
@@ -109,21 +123,23 @@ extension ContextRuleBuilderCore {
         policies = loaded.map(stagedPolicyForEntry)
     }
 
+    /// Builds the edit entry for the policy at `index` of a loaded rule.
+    ///
+    /// A policy whose address is in `recognizedPolicies` carries that
+    /// descriptor, the parameters `readParams` returns for it and a label
+    /// derived from them; any other address is an "Unknown Policy" without
+    /// parameters, and `readParams` is not called for it.
     @MainActor
-    private func buildEditPolicyEntry(
+    internal static func makeEditPolicyEntry(
         address: String,
         index: Int,
         parsed: ParsedContextRuleInfo,
-        flow: ContextRuleFlow
+        readParams: (PolicyInfo) async -> PolicyParams?
     ) async -> EditPolicyEntry {
-        let info = knownPolicies.first { $0.address == address }
+        let info = recognizedPolicies.first { $0.address == address }
         var originalParams: PolicyParams?
         if let info {
-            originalParams = await flow.readPolicyParams(
-                info: info,
-                ruleId: parsed.id,
-                guardedToken: guardedTokenContract(for: parsed)
-            )
+            originalParams = await readParams(info)
         }
         let label: String
         if let info {
@@ -172,7 +188,7 @@ extension ContextRuleBuilderCore {
         }
     }
 
-    private func labelForExistingPolicy(info: PolicyInfo, params: PolicyParams?) -> String {
+    private static func labelForExistingPolicy(info: PolicyInfo, params: PolicyParams?) -> String {
         guard let params else { return info.name }
         switch params.type {
         case "threshold":

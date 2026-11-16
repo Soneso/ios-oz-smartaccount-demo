@@ -18,9 +18,10 @@ public enum AgentDefaults {
     /// Stellar testnet network passphrase.
     public static let networkPassphrase = "Test SDF Network ; September 2015"
 
-    /// WASM hash of the multisig smart-account contract deployed on testnet.
+    /// WASM hash of the multisig smart-account contract deployed on testnet
+    /// (OZ stellar-contracts v0.8.0).
     public static let accountWasmHash =
-        "86b49fe03f7df0ad1c2a28bd8361b923ab57096e09f397f92f0c00ae3bd06d28"
+        "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1"
 
     /// WebAuthn (secp256r1) signature verifier contract address. Required by
     /// `OZSmartAccountConfig` even though the headless agent never signs with a
@@ -63,13 +64,13 @@ public enum AgentDefaults {
     /// Maximum number of escalation polls before the agent gives up waiting.
     public static let pollMaxAttempts = 40
 
-    /// Known testnet policy contracts, by policy type. Informational reference
-    /// for operators wiring up the step-2 delegation flow; the agent does not
-    /// install policies itself.
+    /// Known testnet policy contracts of OZ stellar-contracts v0.8.0, by policy
+    /// type. Informational reference for operators wiring up the step-2
+    /// delegation flow; the agent does not install policies itself.
     public static let knownPolicies: [String: String] = [
-        "threshold": "CAZJ3UVRY3R3S5C5BH32GMYBRSN23N75ZEEXEOLXOUUAHDFIMVP4AXUC",
-        "spendingLimit": "CBQE7L3UNP5IR4I7IBKLS7NV256WHR5TTH26HTMUIK7WXJC6J64RSE2L",
-        "weightedThreshold": "CAF4OCRIB73T5777UWAQS7KGOG6WVIZ3EFXNNUYSPFSBKW2Q5XEIOSPW",
+        "threshold": "CAZ2WFUDXGX265LOEARFEOYYUL6F4BYWXZLGUAWZNJY3MRFPNLSZVS4S",
+        "spendingLimit": "CC3CEYQAP6NPNFIYSWL5MVZRCPJZGWX4XO7WDEJOUVGO2FZX5OONYPA5",
+        "weightedThreshold": "CDBYLFLUNPAYGE3AHZSMB4TFWECFCCHX6CJFMFO6HRPKK2W5PFU2LCKE",
     ]
 }
 

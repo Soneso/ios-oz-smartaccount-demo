@@ -27,7 +27,7 @@ Four connection strategies:
 Send XLM or DEMO tokens from the connected smart account to any Stellar address. When the account has multiple signers (from context rules), a signer picker allows selecting which signers co-authorize the transaction. Supports both single-passkey and multi-signer transfer paths. Signing with a passkey signer triggers a WebAuthn authentication ceremony to sign the Soroban authorization entry.
 
 ### 5. Context Rules
-Lists all on-chain authorization rules for the connected account. Each rule card shows its ID, name, context type (Default, CallContract, CreateContract), signers, policies, and expiry. Supports expanding rules for detail view, removing rules (with a safety check preventing removal of the last rule), and navigating to the rule builder for creating or editing rules.
+Lists all on-chain authorization rules for the connected account. Each rule card shows its ID, name, context type (Default, CallContract, CreateContract, CreateContractExternalRef), signers, policies, and expiry. Supports expanding rules for detail view, removing rules (with a safety check preventing removal of the last rule), and navigating to the rule builder for creating or editing rules.
 
 ### 6. Context Rule Builder
 Form for creating or editing a context rule. Configure the context type, rule name, optional expiry (as a ledger offset converted to an absolute ledger number), signers (passkey, delegated G-address, raw Ed25519), and policy contracts (threshold, spending limit, weighted threshold) with their parameters. In edit mode, you can rename the rule, change its expiry, add or remove signers, and add, remove, or modify policies; each change is applied as a separate on-chain transaction.
@@ -50,7 +50,7 @@ Reached from the bell on the Main Dashboard, which badges the count of pending e
 ios-oz-smartaccount-demo/
 ├── Sources/                              # Cross-platform shared code
 │   ├── Components/                       # SwiftUI components + *ScreenCore.swift shared screen bodies
-│   ├── Config/                           # DemoConfig + PolicyInfo / knownPolicies
+│   ├── Config/                           # DemoConfig + PolicyInfo / knownPolicies, recognizedPolicies
 │   ├── Flows/                            # Business logic (primary SDK consumer)
 │   ├── FlowTypes/                        # DTOs and typealiases so screens never import the SDK directly
 │   ├── Navigation/                       # Route enum used by both platform shells
@@ -90,7 +90,7 @@ See [documentation/agent-flow.md](documentation/agent-flow.md) for the end-to-en
 - Swift 6.0 with `SWIFT_STRICT_CONCURRENCY: complete`
 - xcodegen 2.44+ (`brew install xcodegen`)
 - SwiftLint 0.63.2+ (`brew install swiftlint`)
-- stellar-ios-mac-sdk `3.15.0+` (resolved by Xcode on first package fetch from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
+- stellar-ios-mac-sdk `3.16.0+` (resolved by Xcode on first package fetch from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
 - Reown-swift `2.2.9` (pinned, resolved by Xcode on first package fetch)
 - Passkey (WebAuthn) features require the Associated Domains configuration in [PASSKEY_SETUP.md](PASSKEY_SETUP.md). The demo is preconfigured for `soneso.com` (works on the iOS Simulator as-is); macOS additionally needs a one-time `swcutil developer-mode -e true`.
 
@@ -193,7 +193,7 @@ All testnet configuration is centralized as `public static` members of `public e
 |---|---|
 | `rpcURL` | Soroban RPC endpoint |
 | `networkPassphrase` | Stellar testnet passphrase |
-| `accountWasmHash` | Smart account contract WASM hash (OZ stellar-contracts v0.7.0) |
+| `accountWasmHash` | Smart account contract WASM hash (OZ stellar-contracts v0.8.0) |
 | `webauthnVerifierAddress` | On-chain WebAuthn (secp256r1) signature verifier contract |
 | `ed25519VerifierAddress` | On-chain Ed25519 signature verifier contract |
 | `nativeTokenContract` | XLM Stellar Asset Contract (SAC) address on testnet |
@@ -206,7 +206,7 @@ All testnet configuration is centralized as `public static` members of `public e
 
 DEMO token settings (`demoToken*`) control the deterministic deployment and minting of a custom Soroban token used for testing transfers. The token admin seed is intentionally public; the demo is testnet-only and the admin key has no monetary value.
 
-Known policy contracts (threshold, spending limit, weighted threshold) are defined in `knownPolicies`.
+Known policy contracts (threshold, spending limit, weighted threshold) are defined in `knownPolicies` (the v0.8.0 deployments offered for new rules) and `recognizedPolicies` (those plus the v0.7.0 deployments that rules on v0.7.0 wallets use).
 
 ## External Wallet Connection
 
