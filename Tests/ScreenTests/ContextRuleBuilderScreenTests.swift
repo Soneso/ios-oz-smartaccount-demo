@@ -50,6 +50,59 @@ struct ContextTypeOptionDisplayTests {
             "Matches contract deployments using a specific WASM hash"
         )
     }
+
+    @Test("Create contract from reference option follows the other options in the picker")
+    func createContractExternalRef_option() {
+        #expect(ContextTypeOption.allCases == [
+            .defaultRule, .callContract, .createContract, .createContractExternalRef
+        ])
+        #expect(ContextTypeOption.createContractExternalRef.displayName == "Create Contract from Reference")
+        #expect(
+            ContextTypeOption.createContractExternalRef.description ==
+            "Matches contract deployments from the code an owner contract stores under a tag"
+        )
+    }
+}
+
+// ============================================================================
+// MARK: - Create contract from reference: owner validation
+// ============================================================================
+
+@Suite("ContextRuleBuilderCore: executable owner validation")
+struct ExternalRefOwnerValidationTests {
+
+    static let owner = "CAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSBFLM"
+
+    @Test("A contract address passes, also with surrounding whitespace")
+    func validOwner() {
+        #expect(ContextRuleBuilderCore.externalRefOwnerError(Self.owner) == nil)
+        #expect(ContextRuleBuilderCore.externalRefOwnerError("  \(Self.owner)\n") == nil)
+    }
+
+    @Test("An empty owner and a G-address fail the C-prefix and length check")
+    func ownerWithoutCPrefixOrLength() {
+        #expect(
+            ContextRuleBuilderCore.externalRefOwnerError("   ") ==
+            "Invalid executable owner. Must start with C and be 56 characters, got 0"
+        )
+        #expect(
+            ContextRuleBuilderCore.externalRefOwnerError("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5") ==
+            "Invalid executable owner. Must start with C and be 56 characters, got 56"
+        )
+        #expect(
+            ContextRuleBuilderCore.externalRefOwnerError(String(Self.owner.dropLast())) ==
+            "Invalid executable owner. Must start with C and be 56 characters, got 55"
+        )
+    }
+
+    @Test("A C-prefixed 56-character string with a wrong checksum fails the strkey check")
+    func ownerWithBadChecksum() {
+        let badChecksum = "\(Self.owner.prefix(55))A"
+        #expect(
+            ContextRuleBuilderCore.externalRefOwnerError(badChecksum) ==
+            "Invalid executable owner. Not a valid contract address: \(badChecksum)"
+        )
+    }
 }
 
 // ============================================================================

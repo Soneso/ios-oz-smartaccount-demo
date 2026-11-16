@@ -6,6 +6,23 @@
 import SwiftUI
 
 // ============================================================================
+// MARK: - DelegatedAddOutcome
+// ============================================================================
+
+/// Result of submitting the delegated-signer form with one address.
+internal enum DelegatedAddOutcome {
+
+    /// The address is refused; the associated value is the field error.
+    case refused(String)
+
+    /// The signer is staged on the rule being created.
+    case staged(DelegatedSigner)
+
+    /// The signer is staged as a new entry of the rule being edited.
+    case stagedEntry(EditSignerEntry)
+}
+
+// ============================================================================
 // MARK: - SignerManagementSection: Delegated form
 // ============================================================================
 
@@ -87,38 +104,47 @@ extension SignerManagementSection {
 
     internal func addDelegated() {
         let trimmed = delegatedAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let preError = preCheckDelegated(trimmed: trimmed) {
-            setError("delegatedAddress", preError)
+        switch delegatedAddOutcome(for: trimmed) {
+        case .refused(let message):
+            setError("delegatedAddress", message)
             return
+        case .staged(let newSigner):
+            signers.append(newSigner)
+        case .stagedEntry(let entry):
+            onAddEntry?(entry)
+        }
+        delegatedAddress = ""
+        fieldErrors.removeValue(forKey: "delegatedAddress")
+        fieldErrors.removeValue(forKey: "signers")
+        activityLog.info("Added delegated signer: \(truncateAddress(trimmed, chars: 6))")
+    }
+
+    /// Decides what the delegated-signer form does with `input`: refuse it with
+    /// a field error, stage it on the new rule (create mode), or stage it as a
+    /// new entry of the edited rule (edit mode). Anything but a valid
+    /// 56-character `G…` address is refused in both modes.
+    internal func delegatedAddOutcome(for input: String) -> DelegatedAddOutcome {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let preError = preCheckDelegated(trimmed: trimmed) {
+            return .refused(preError)
         }
         let newSigner: DelegatedSigner
         do {
             newSigner = try DelegatedSigner(address: trimmed)
         } catch {
             let detail = ActivityLogState.redact(actionableMessage(for: error))
-            setError("delegatedAddress", "Invalid address: \(detail)")
-            return
+            return .refused("Invalid address: \(detail)")
         }
         if isEditing {
             if let validationError = validateAddEdit(newSigner) {
-                setError("delegatedAddress", validationError)
-                return
+                return .refused(validationError)
             }
-            let entry = EditSignerEntry(
-                signer: newSigner, onChainId: nil, isOriginal: false
-            )
-            onAddEntry?(entry)
-        } else {
-            if let validationError = validateAdd(newSigner) {
-                setError("delegatedAddress", validationError)
-                return
-            }
-            signers.append(newSigner)
+            return .stagedEntry(EditSignerEntry(signer: newSigner, onChainId: nil, isOriginal: false))
         }
-        delegatedAddress = ""
-        fieldErrors.removeValue(forKey: "delegatedAddress")
-        fieldErrors.removeValue(forKey: "signers")
-        activityLog.info("Added delegated signer: \(truncateAddress(trimmed, chars: 6))")
+        if let validationError = validateAdd(newSigner) {
+            return .refused(validationError)
+        }
+        return .staged(newSigner)
     }
 
     private func preCheckDelegated(trimmed: String) -> String? {

@@ -46,7 +46,23 @@ extension ContextRuleBuilderCore {
             return nil
         case .createContract:
             return validateWasmHash()
+        case .createContractExternalRef:
+            return Self.externalRefOwnerError(refOwner).map { ["refOwner": $0] }
         }
+    }
+
+    /// Returns the field error for the executable owner of a "Create Contract
+    /// from Reference" rule, or `nil` when `owner`, trimmed of surrounding
+    /// whitespace, is a valid contract address.
+    internal static func externalRefOwnerError(_ owner: String) -> String? {
+        let trimmed = owner.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.hasPrefix("C") || trimmed.count != 56 {
+            return "Invalid executable owner. Must start with C and be 56 characters, got \(trimmed.count)"
+        }
+        if !isValidContractAddress(trimmed) {
+            return "Invalid executable owner. Not a valid contract address: \(trimmed)"
+        }
+        return nil
     }
 
     private func validateWasmHash() -> [String: String]? {

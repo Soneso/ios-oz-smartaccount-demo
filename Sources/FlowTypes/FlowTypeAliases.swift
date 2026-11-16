@@ -65,7 +65,8 @@ public typealias StellarProtocol = StellarProtocolConstants
 /// reference `[OZSelectedSigner]` return types without a per-file SDK import.
 public typealias SelectedSignerEntry = OZSelectedSigner
 
-/// Context rule type discriminant (default, call-contract, create-contract).
+/// Context rule type discriminant (default, call-contract, create-contract,
+/// create-contract from an executable reference).
 ///
 /// Re-exported so the builder submission pipeline can reference `OZContextRuleType`
 /// without a per-file SDK import.

@@ -54,6 +54,13 @@ struct ContextRuleFormatContextTypeLabelTests {
         #expect(result.contains("abcdef01"))
         #expect(result.hasSuffix("..."))
     }
+
+    @Test("CreateContractExternalRef label names the truncated owner and the tag")
+    func contextTypeLabel_createContractExternalRef_verbatim() {
+        let owner = "CAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSBFLM"
+        let result = contextTypeLabel(for: .createContractExternalRef(owner: owner, tag: "account-v1"))
+        #expect(result == "Create Contract from Ref: CAAQ...BFLM / account-v1")
+    }
 }
 
 @Suite("ContextRuleFormat: signerTypeLabel")

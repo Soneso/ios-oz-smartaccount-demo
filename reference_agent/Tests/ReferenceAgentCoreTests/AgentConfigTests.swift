@@ -32,6 +32,19 @@ struct AgentConfigDefaultsTests {
         #expect(config.isCompleteForLiveRun == false)
     }
 
+    @Test("the defaults name the OZ stellar-contracts v0.8.0 account build and policies")
+    func defaultsAreV080() {
+        #expect(
+            AgentDefaults.accountWasmHash ==
+                "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1"
+        )
+        #expect(AgentDefaults.knownPolicies == [
+            "threshold": "CAZ2WFUDXGX265LOEARFEOYYUL6F4BYWXZLGUAWZNJY3MRFPNLSZVS4S",
+            "spendingLimit": "CC3CEYQAP6NPNFIYSWL5MVZRCPJZGWX4XO7WDEJOUVGO2FZX5OONYPA5",
+            "weightedThreshold": "CDBYLFLUNPAYGE3AHZSMB4TFWECFCCHX6CJFMFO6HRPKK2W5PFU2LCKE",
+        ])
+    }
+
     @Test("description redacts the seed and coordination token")
     func descriptionRedacts() throws {
         let config = AgentConfig(

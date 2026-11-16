@@ -156,7 +156,8 @@ public struct PolicyParams: Sendable, Equatable {
 /// via `set_threshold`, 2 ops for other types via remove + re-add).
 public struct EditPolicyEntry: Sendable {
 
-    /// Known-policy descriptor, or `nil` for an unknown policy contract.
+    /// Policy descriptor from `recognizedPolicies`, or `nil` for an unknown
+    /// policy contract.
     public let info: PolicyInfo?
 
     /// Human-readable label shown in the list (e.g. `"Threshold: 2-of-N"`).

@@ -161,6 +161,11 @@ extension ContextRuleBuilderCore {
                 throw ContextRuleFlowError.invalidContextType(reason: "Invalid WASM hash hex")
             }
             return .createContract(wasmHash: bytes)
+        case .createContractExternalRef:
+            return try resolvedFlow().buildCreateContractExternalRefContextType(
+                owner: refOwner,
+                tag: refTag
+            )
         }
     }
 }

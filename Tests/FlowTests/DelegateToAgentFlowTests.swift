@@ -94,6 +94,10 @@ struct DelegateToAgentFlowDelegateTests {
         // One Ed25519 external signer + one spending-limit policy.
         #expect(manager.lastAddSigners.count == 1)
         #expect(manager.lastAddPolicies.count == 1)
+        // The spending-limit policy is the OZ stellar-contracts v0.8.0 deployment.
+        let spendingLimitV080 = "CC3CEYQAP6NPNFIYSWL5MVZRCPJZGWX4XO7WDEJOUVGO2FZX5OONYPA5"
+        #expect(manager.lastAddPolicies[spendingLimitV080] != nil)
+        #expect(result.summary?.spendingLimitPolicyAddress == spendingLimitV080)
         #expect(result.summary?.agentPublicKey == DelegateFixtures.agentKeyHex)
         // No ledger source wired in the test flow, so an offset yields no expiry.
         #expect(result.summary?.validUntilLedger == nil)

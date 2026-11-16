@@ -6,44 +6,6 @@
 import SwiftUI
 
 // ============================================================================
-// MARK: - ContextTypeOption
-// ============================================================================
-
-/// Options exposed in the "Context Type" dropdown of the builder.
-public enum ContextTypeOption: String, CaseIterable, Sendable {
-
-    /// Default fallback rule that matches any operation.
-    case defaultRule
-
-    /// Rule matching invocations of a specific contract address.
-    case callContract
-
-    /// Rule matching contract deployments using a specific WASM hash.
-    case createContract
-
-    /// Human-readable label shown in the dropdown header and selected row.
-    public var displayName: String {
-        switch self {
-        case .defaultRule:    return "Default (Any Operation)"
-        case .callContract:   return "Call Contract"
-        case .createContract: return "Create Contract"
-        }
-    }
-
-    /// One-sentence sub-label shown below the option in the dropdown menu.
-    public var description: String {
-        switch self {
-        case .defaultRule:
-            return "Matches any operation that does not match a more specific rule"
-        case .callContract:
-            return "Matches invocations to a specific contract address"
-        case .createContract:
-            return "Matches contract deployments using a specific WASM hash"
-        }
-    }
-}
-
-// ============================================================================
 // MARK: - ContextRuleBuilderCore
 // ============================================================================
 
@@ -100,6 +62,8 @@ public struct ContextRuleBuilderCore: View {
     @State internal var contextTypeOption: ContextTypeOption = .defaultRule
     @State internal var contractAddress: String = ""
     @State internal var wasmHashHex: String = ""
+    @State internal var refOwner: String = ""
+    @State internal var refTag: String = ""
     @State internal var hasExpiry: Bool = false
     @State internal var expiryLedger: String = ""
 

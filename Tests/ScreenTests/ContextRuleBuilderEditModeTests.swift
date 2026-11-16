@@ -34,6 +34,133 @@ struct ContextRuleBuilderEditConstructionTests {
         #expect(core.editRuleId == nil)
         #expect(!core.isEditing)
     }
+
+    @Test("The context type is locked in edit mode and open in create mode")
+    func builderCore_contextTypeLockedInEditMode() {
+        #expect(ContextRuleBuilderCore(editRuleId: 5) { }.contextTypeLocked)
+        #expect(!ContextRuleBuilderCore { }.contextTypeLocked)
+    }
+}
+
+// ============================================================================
+// MARK: - Edit mode: context type prefill
+// ============================================================================
+
+@Suite("ContextRuleBuilderCore: edit-mode context type prefill")
+@MainActor
+struct ContextTypePrefillTests {
+
+    @Test("A CreateContractExternalRef rule reopens with its owner and tag")
+    func prefill_createContractExternalRef() {
+        let owner = "CAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSBFLM"
+        let fields = ContextRuleBuilderCore.contextTypeFormFields(
+            for: .createContractExternalRef(owner: owner, tag: "account-v1")
+        )
+        #expect(fields == ContextTypeFormFields(
+            option: .createContractExternalRef,
+            refOwner: owner,
+            refTag: "account-v1"
+        ))
+    }
+
+    @Test("Default, CallContract and CreateContract rules reopen with their own field")
+    func prefill_otherKinds() {
+        let address = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+        #expect(
+            ContextRuleBuilderCore.contextTypeFormFields(for: .defaultRule) ==
+            ContextTypeFormFields(option: .defaultRule)
+        )
+        #expect(
+            ContextRuleBuilderCore.contextTypeFormFields(for: .callContract(contractAddress: address)) ==
+            ContextTypeFormFields(option: .callContract, contractAddress: address)
+        )
+        let wasm = Data([0xAB, 0xCD] + Array(repeating: 0x01, count: 30))
+        #expect(
+            ContextRuleBuilderCore.contextTypeFormFields(for: .createContract(wasmHash: wasm)) ==
+            ContextTypeFormFields(
+                option: .createContract,
+                wasmHashHex: "abcd" + String(repeating: "01", count: 30)
+            )
+        )
+    }
+}
+
+// ============================================================================
+// MARK: - Edit mode: policies of a v0.7.0 wallet
+// ============================================================================
+
+@Suite("ContextRuleBuilderCore: edit-mode policy recognition")
+@MainActor
+struct EditPolicyRecognitionTests {
+
+    /// The OZ stellar-contracts v0.7.0 threshold deployment, which rules of
+    /// wallets created before v0.8.0 carry.
+    static let legacyThreshold = "CAZJ3UVRY3R3S5C5BH32GMYBRSN23N75ZEEXEOLXOUUAHDFIMVP4AXUC"
+
+    static func rule(policy: String) -> ParsedContextRuleInfo {
+        OZParsedContextRule(
+            id: 3,
+            contextType: .defaultRule,
+            name: "legacy",
+            signers: [ContextRuleFixtures.makeDelegatedSigner()],
+            signerIds: [3],
+            policies: [policy],
+            policyIds: [8],
+            validUntil: nil
+        )
+    }
+
+    @Test("A v0.7.0 threshold policy loads as \"(v0.7.0)\" with its on-chain parameters and stays editable")
+    func legacyThresholdPolicy() async {
+        let stored = PolicyParams(
+            type: "threshold",
+            threshold: 2,
+            spendingLimit: nil,
+            periodDays: nil,
+            signerWeights: nil
+        )
+        var requested: [PolicyInfo] = []
+        let entry = await ContextRuleBuilderCore.makeEditPolicyEntry(
+            address: Self.legacyThreshold,
+            index: 0,
+            parsed: Self.rule(policy: Self.legacyThreshold)
+        ) { info in
+            requested.append(info)
+            return stored
+        }
+
+        #expect(requested.map(\.address) == [Self.legacyThreshold])
+        #expect(requested.map(\.type) == ["threshold"])
+        #expect(entry.info?.name == "Threshold (M-of-N) (v0.7.0)")
+        #expect(entry.info?.type == "threshold")
+        #expect(entry.label == "Threshold: 2-of-N")
+        #expect(entry.address == Self.legacyThreshold)
+        #expect(entry.onChainId == 8)
+        #expect(entry.isOriginal)
+        // The inline parameter editor renders for an original entry with
+        // loaded parameters.
+        #expect(entry.originalParams == stored)
+    }
+
+    @Test("A policy outside the recognized set loads as \"Unknown Policy\" without a parameter read")
+    func unknownPolicy() async {
+        let unknown = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+        var readCount = 0
+        let entry = await ContextRuleBuilderCore.makeEditPolicyEntry(
+            address: unknown,
+            index: 0,
+            parsed: Self.rule(policy: unknown)
+        ) { _ in
+            readCount += 1
+            return nil
+        }
+
+        #expect(readCount == 0)
+        #expect(entry.info == nil)
+        #expect(entry.label == "Unknown Policy")
+        #expect(entry.originalParams == nil)
+        #expect(entry.onChainId == 8)
+    }
 }
 
 // ============================================================================

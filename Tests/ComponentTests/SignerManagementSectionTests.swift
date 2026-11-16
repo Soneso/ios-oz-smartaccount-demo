@@ -95,3 +95,60 @@ struct SignerManagementSectionConstructionTests {
         )
     }
 }
+
+// ============================================================================
+// MARK: - SignerManagementSection: Delegated input
+// ============================================================================
+
+@Suite("SignerManagementSection: Delegated input")
+@MainActor
+struct SignerSectionDelegatedInputTests {
+
+    static let contractAddress = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+    static let accountAddress = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+
+    static func section(isEditing: Bool) -> SignerManagementSection {
+        SignerManagementSection(
+            signers: .constant([]),
+            signerWeights: .constant([:]),
+            fieldErrors: .constant([:]),
+            isSubmitting: false,
+            flow: BuilderFixtures.makeFlow().flow,
+            connectedCredentialId: nil,
+            ed25519VerifierAddress: DemoConfig.ed25519VerifierAddress,
+            isEditing: isEditing
+        )
+    }
+
+    @Test("A contract address is refused as a Delegated signer in create and edit mode", arguments: [false, true])
+    func contractAddressRefused(isEditing: Bool) {
+        let outcome = Self.section(isEditing: isEditing).delegatedAddOutcome(for: Self.contractAddress)
+        guard case .refused(let message) = outcome else {
+            Issue.record("Expected a refusal for \(Self.contractAddress), got \(outcome)")
+            return
+        }
+        #expect(message == "Must be a valid G-address (56 characters)")
+    }
+
+    @Test("An account address is staged on a new rule in create mode")
+    func accountAddressStagedInCreateMode() {
+        let outcome = Self.section(isEditing: false).delegatedAddOutcome(for: " \(Self.accountAddress) ")
+        guard case .staged(let signer) = outcome else {
+            Issue.record("Expected the signer to be staged, got \(outcome)")
+            return
+        }
+        #expect(signer.address == Self.accountAddress)
+    }
+
+    @Test("An account address is staged as a new entry in edit mode")
+    func accountAddressStagedInEditMode() {
+        let outcome = Self.section(isEditing: true).delegatedAddOutcome(for: Self.accountAddress)
+        guard case .stagedEntry(let entry) = outcome else {
+            Issue.record("Expected a new edit entry, got \(outcome)")
+            return
+        }
+        #expect((entry.signer as? DelegatedSigner)?.address == Self.accountAddress)
+        #expect(entry.onChainId == nil)
+        #expect(!entry.isOriginal)
+    }
+}

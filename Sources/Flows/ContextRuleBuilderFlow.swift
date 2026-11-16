@@ -202,6 +202,27 @@ extension ContextRuleFlow {
         return current &+ offset
     }
 
+    /// Builds a `CreateContractExternalRef` context type that matches contract
+    /// deployments from the executable reference the contract `owner` stores
+    /// under `tag`.
+    ///
+    /// - Parameters:
+    ///   - owner: Contract address (`C…`) of the owner; surrounding whitespace
+    ///     is trimmed.
+    ///   - tag: The tag the reference is stored under, used as entered.
+    /// - Returns: The context type for the trimmed owner and the tag.
+    /// - Throws: ``SmartAccountValidationException/InvalidAddress`` when the
+    ///   trimmed owner is not a valid contract address.
+    public func buildCreateContractExternalRefContextType(
+        owner: String,
+        tag: String
+    ) throws -> OZContextRuleType {
+        try OZBuilders.createCreateContractExternalRefContextType(
+            owner: owner.trimmingCharacters(in: .whitespacesAndNewlines),
+            tag: tag
+        )
+    }
+
     // swiftlint:disable function_parameter_count
 
     /// Submits a fully-staged new context rule via the SDK and returns a

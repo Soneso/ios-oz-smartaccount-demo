@@ -52,6 +52,14 @@ struct DemoConfigTests {
         #expect(isLower)
     }
 
+    @Test("Account WASM hash is the OZ stellar-contracts v0.8.0 build")
+    func accountWasmHashIsV080() {
+        #expect(
+            DemoConfig.accountWasmHash ==
+            "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1"
+        )
+    }
+
     // -------------------------------------------------------------------------
     // MARK: - Contract Addresses
     // -------------------------------------------------------------------------
@@ -219,5 +227,37 @@ struct DemoConfigTests {
             #expect(!policy.name.isEmpty, "Policy '\(policy.type)' name must not be empty")
             #expect(!policy.description.isEmpty, "Policy '\(policy.type)' description must not be empty")
         }
+    }
+
+    @Test("Known policies offer the OZ stellar-contracts v0.8.0 deployments")
+    func knownPoliciesAreV080() {
+        #expect(knownPolicies.map(\.type) == ["threshold", "spending_limit", "weighted_threshold"])
+        #expect(knownPolicies.map(\.address) == [
+            "CAZ2WFUDXGX265LOEARFEOYYUL6F4BYWXZLGUAWZNJY3MRFPNLSZVS4S",
+            "CC3CEYQAP6NPNFIYSWL5MVZRCPJZGWX4XO7WDEJOUVGO2FZX5OONYPA5",
+            "CDBYLFLUNPAYGE3AHZSMB4TFWECFCCHX6CJFMFO6HRPKK2W5PFU2LCKE"
+        ])
+    }
+
+    @Test("Recognized policies list the offered policies, then the v0.7.0 deployments named \"(v0.7.0)\"")
+    func recognizedPoliciesAddV070() {
+        #expect(recognizedPolicies.count == 6)
+        let offered = recognizedPolicies.prefix(3)
+        #expect(offered.map(\.address) == knownPolicies.map(\.address))
+        #expect(offered.map(\.name) == knownPolicies.map(\.name))
+
+        let legacy = Array(recognizedPolicies.dropFirst(3))
+        #expect(legacy.map(\.type) == ["threshold", "spending_limit", "weighted_threshold"])
+        #expect(legacy.map(\.name) == [
+            "Threshold (M-of-N) (v0.7.0)",
+            "Spending Limit (v0.7.0)",
+            "Weighted Threshold (v0.7.0)"
+        ])
+        #expect(legacy.map(\.address) == [
+            "CAZJ3UVRY3R3S5C5BH32GMYBRSN23N75ZEEXEOLXOUUAHDFIMVP4AXUC",
+            "CBQE7L3UNP5IR4I7IBKLS7NV256WHR5TTH26HTMUIK7WXJC6J64RSE2L",
+            "CAF4OCRIB73T5777UWAQS7KGOG6WVIZ3EFXNNUYSPFSBKW2Q5XEIOSPW"
+        ])
+        #expect(legacy.map(\.description) == knownPolicies.map(\.description))
     }
 }
